@@ -1,0 +1,40 @@
+services:
+  flynow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      FLYNOW_ENV: ${FLYNOW_ENV:-development}
+      FLYNOW_HOST: 0.0.0.0
+      FLYNOW_PORT: 8080
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-flynow}
+      DATABASE_USER: ${DATABASE_USER:-flynow}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-flynow}
+      DATABASE_SSLMODE: disable
+    ports:
+      - "${FLYNOW_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-flynow}
+      POSTGRES_USER: ${DATABASE_USER:-flynow}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-flynow}
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      - flynow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  flynow-postgres-data:
