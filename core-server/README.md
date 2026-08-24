@@ -5,6 +5,9 @@ implementation completes the Project Foundation stage: configuration,
 structured logging, PostgreSQL migrations, an HTTP health check, and graceful
 shutdown. The checklist below tracks the remaining Phase 1 backend work.
 
+For a quick explanation of the current architecture, domain model, services,
+database, security, and code patterns, see the [documentation index](docs/README.md).
+
 ## Phase 1 — CLI-first development plan
 
 **Target:** complete and validate the core platform before Year 4 starts. Work
