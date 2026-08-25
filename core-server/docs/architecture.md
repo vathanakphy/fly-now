@@ -13,7 +13,6 @@ cmd/server
     +-- config.Load
     +-- slog JSON logger
     +-- database.New
-    +-- migrations.Run
     +-- server.New
             |
             +-- GET /health --> PostgreSQL Ping
@@ -21,6 +20,22 @@ cmd/server
 
 `cmd/server/main.go` is the current composition root: it creates infrastructure
 dependencies, starts the HTTP server, and coordinates graceful shutdown.
+It does not change the database schema.
+
+Migrations use a separate one-off process:
+
+```text
+operator/deployment
+       |
+       v
+cmd/migrate
+  |-- config.Load
+  |-- database.New
+  `-- migrations.Run --> PostgreSQL --> exit
+```
+
+This follows the same operational pattern as Django's explicit `migrate`
+command: application startup and schema deployment are separate actions.
 
 ## Application-management structure
 
@@ -52,11 +67,12 @@ without moving business rules.
 | Package | Responsibility |
 |---|---|
 | `cmd/server` | Server startup and graceful shutdown |
+| `cmd/migrate` | Explicit one-off migration execution |
 | `internal/config` | Typed environment configuration and validation |
 | `internal/database` | PostgreSQL/GORM connection ownership |
 | `internal/database/migrations` | Embedded transactional migrations |
 | `internal/server` | HTTP server and health endpoint |
-| `internal/application` | Domain types, inputs, rules, errors, and service |
+| `internal/application` | Dockerfile-only domain types, inputs, rules, errors, and service |
 | `internal/application/store` | GORM records and PostgreSQL repository |
 | `internal/secret` | AES-GCM encryption implementation |
 
@@ -78,4 +94,3 @@ flynow deploy
 ```
 
 This is planned design, not current implementation.
-

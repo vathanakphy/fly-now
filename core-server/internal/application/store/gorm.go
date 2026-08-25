@@ -27,13 +27,13 @@ func NewGORM(db *gorm.DB) *GORM {
 func (s *GORM) Create(ctx context.Context, app *application.Application) error {
 	record := recordFromApplication(*app)
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Omit("Source", "Runtime", "Environment").Create(&record).Error; err != nil {
+		if err := tx.Omit("Source", "Container", "Environment").Create(&record).Error; err != nil {
 			return err
 		}
 		if err := tx.Create(record.Source).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(record.Runtime).Error; err != nil {
+		if err := tx.Create(record.Container).Error; err != nil {
 			return err
 		}
 		if len(record.Environment) > 0 {
@@ -62,7 +62,7 @@ func (s *GORM) find(ctx context.Context, query string, value any) (application.A
 	var record applicationRecord
 	err := s.db.WithContext(ctx).
 		Preload("Source").
-		Preload("Runtime").
+		Preload("Container").
 		Preload("Environment", func(db *gorm.DB) *gorm.DB { return db.Order("key ASC") }).
 		Where(query, value).
 		First(&record).Error
@@ -79,7 +79,7 @@ func (s *GORM) List(ctx context.Context) ([]application.Application, error) {
 	var records []applicationRecord
 	err := s.db.WithContext(ctx).
 		Preload("Source").
-		Preload("Runtime").
+		Preload("Container").
 		Order("created_at ASC, id ASC").
 		Find(&records).Error
 	if err != nil {
@@ -115,23 +115,24 @@ func (s *GORM) Update(ctx context.Context, app *application.Application) error {
 			}).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&runtimeRecord{}).
+		if err := tx.Model(&containerRecord{}).
 			Where("application_id = ?", record.ID).
 			Updates(map[string]any{
-				"runtime":           record.Runtime.Runtime,
-				"root_directory":    record.Runtime.RootDirectory,
-				"build_command":     record.Runtime.BuildCommand,
-				"start_command":     record.Runtime.StartCommand,
-				"service_port":      record.Runtime.ServicePort,
-				"health_check_path": record.Runtime.HealthCheckPath,
-				"auto_deploy":       record.Runtime.AutoDeploy,
+				"root_directory":    record.Container.RootDirectory,
+				"dockerfile_path":   record.Container.DockerfilePath,
+				"service_port":      record.Container.ServicePort,
+				"health_check_path": record.Container.HealthCheckPath,
+				"auto_deploy":       record.Container.AutoDeploy,
 			}).Error; err != nil {
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		if errors.Is(err, application.ErrNotFound) {
+			return err
+		}
+		return fmt.Errorf("update application aggregate: %w", err)
 	}
 	return nil
 }
@@ -142,7 +143,7 @@ func (s *GORM) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("delete application: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return application.ErrEnvironmentMissing
+		return application.ErrNotFound
 	}
 	return nil
 }
@@ -175,7 +176,7 @@ func (s *GORM) DeleteEnvironment(ctx context.Context, applicationID uuid.UUID, k
 		return fmt.Errorf("delete environment variable: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return application.ErrNotFound
+		return application.ErrEnvironmentMissing
 	}
 	return nil
 }
@@ -201,5 +202,5 @@ func mapCreateError(err error) error {
 	if errors.As(err, &postgresErr) && postgresErr.ConstraintName == "applications_active_slug_unique" {
 		return application.ErrSlugConflict
 	}
-	return err
+	return fmt.Errorf("create application aggregate: %w", err)
 }

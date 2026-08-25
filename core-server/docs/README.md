@@ -22,8 +22,8 @@ Read these first:
 
 ## Current scope
 
-The running server currently provides PostgreSQL migrations and `GET /health`.
-Application-management domain, service, repository`, and encryption code exists,
-but it is not connected to an executable interface. The CLI is the next public
-interface planned in the root [README](../README.md).
-
+The running server currently provides `GET /health`. Database migrations are a
+separate explicit command. Dockerfile-only application domain, service,
+repository, and encryption code exists, but it is not connected to an
+executable interface. The CLI is the next public interface planned in the root
+[README](../README.md).

@@ -10,11 +10,11 @@ and encryption configuration are connected.
 
 | Area | Status | Evidence or gap |
 |---|---|---|
-| Project foundation | Complete in code | Config, logging, PostgreSQL, migrations, health, shutdown, Docker Compose, unit tests |
-| Domain model | Complete for current scope | Pure types, separate inputs, lifecycle values |
-| Database schema | Partial | Tables exist; required constraints and integration tests remain |
-| PostgreSQL repository | Mostly complete | CRUD and transactions exist; error issues and integration tests remain |
-| Application service | Mostly complete | Rules and operations exist; no executable wiring |
+| Project foundation | Complete in code | Config, logging, PostgreSQL, explicit migration command, health, shutdown, Docker Compose, unit tests |
+| Domain model | Complete for current scope | Dockerfile-only container config, separate inputs, lifecycle values |
+| Database schema | Partial | Docker-only migration and path/port constraints exist; other constraints and integration tests remain |
+| PostgreSQL repository | Mostly complete | Docker container mappings, CRUD, transactions, and error mappings exist; integration tests remain |
+| Application service | Mostly complete | Dockerfile configuration rules and operations exist; no executable wiring or source-time file check |
 | Environment encryption | Partial | AES-GCM exists; configuration and rotation are missing |
 | CLI | Not started | `cmd/flynow` and command parsing are absent |
 | Container runtime and later stages | Not started | Correctly deferred by the plan |
@@ -33,26 +33,21 @@ A live Compose startup, health request, persistence restart, and graceful-stop
 test were not performed. Therefore the complete Stage 1 runtime exit criteria
 still need an environment-level verification.
 
-## README tracking corrections
+## Remaining repository verification
 
-The root README is broadly accurate. These checked repository claims are only
-partially complete:
-
-1. Application and environment deletion return swapped not-found error types.
-2. Several persistence failures lack operation context.
-3. Repository behavior is not protected by PostgreSQL integration tests.
+Application/environment not-found mappings and persistence error context have
+been corrected. Repository behavior and migration `000003` still require tests
+against a real PostgreSQL instance.
 
 ## Recommended next order
 
-1. Fix repository error mapping and error wrapping.
-2. Add PostgreSQL migration and repository integration tests.
-3. Add typed encryption key and key-version configuration.
-4. Create `cmd/flynow` and wire repository, encryptor, and service.
-5. Implement application and environment CLI commands.
-6. Test parsing, exit codes, secret masking, persistence, and rollback.
-7. Review database constraints in a new migration.
+1. Add PostgreSQL migration and repository integration tests.
+2. Add typed encryption key and key-version configuration.
+3. Create `cmd/flynow` and wire repository, encryptor, and service.
+4. Implement application and environment CLI commands.
+5. Test parsing, exit codes, secret masking, persistence, and rollback.
+6. Review remaining database constraints in a new migration.
 
 Stage 2 is complete only when the CLI can manage applications across process and
 container restarts, secrets are encrypted at rest, invalid operations fail, and
 all unit and PostgreSQL integration tests pass.
-

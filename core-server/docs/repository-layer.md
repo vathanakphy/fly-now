@@ -13,11 +13,11 @@ tags and `gorm.DeletedAt` from leaking into the domain model.
 
 ## Query behavior
 
-- Create inserts the application, source, runtime, and environment rows in one
+- Create inserts the application, source, container, and environment rows in one
   transaction.
-- Get preloads source, runtime, and environment records.
+- Get preloads source, container, and environment records.
 - List orders applications by `created_at`, then `id`.
-- Update changes application, source, and runtime rows in one transaction.
+- Update changes application, source, and container rows in one transaction.
 - Delete uses GORM soft deletion.
 - Environment set uses PostgreSQL upsert on `(application_id, key)`.
 - Environment lists are ordered by key.
@@ -31,15 +31,8 @@ The repository maps a missing application query to `application.ErrNotFound`.
 It maps the named active-slug unique constraint to
 `application.ErrSlugConflict` during creation.
 
-## Known issues
+## Remaining gap
 
-1. `GORM.Delete` currently returns `ErrEnvironmentMissing` when the application
-   is absent. It should return `ErrNotFound`.
-2. `GORM.DeleteEnvironment` returns `ErrNotFound` for a missing variable instead
-   of the more specific `ErrEnvironmentMissing`.
-3. Some create and update failures are returned without operation context.
-4. Repository behavior has no real-PostgreSQL integration tests.
-
-These issues mean the README repository checklist is mostly, not fully,
-complete.
-
+Repository behavior has no real-PostgreSQL integration tests. These tests must
+cover transactions, soft deletion, error mapping, and the container-config
+migration.

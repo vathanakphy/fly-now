@@ -12,7 +12,7 @@ future CLI
   -> PostgreSQL transaction
        applications
        application_sources
-       application_runtime_configs
+       application_container_configs
        optional environment rows
 ```
 
@@ -25,7 +25,7 @@ input identifier
   -> parse as UUID
        | success -> Store.ByID
        ` failure -> Store.BySlug
-  -> preload source, runtime, and environment
+  -> preload source, container configuration, and environment
 ```
 
 Normal lookups do not include soft-deleted applications.
@@ -72,4 +72,3 @@ GET /health
        | success -> 200 {healthy}
        ` failure -> 503 {unhealthy}
 ```
-

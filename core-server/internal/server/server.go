@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
 	"github.com/flynow/core-server/internal/config"
 )
 

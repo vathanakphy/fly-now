@@ -2,15 +2,15 @@
 
 ## Summary
 
-An `Application` is the aggregate root. It owns source, runtime, and environment
-configuration needed to build and run one service.
+An `Application` is the aggregate root. It owns source, Docker container, and
+environment configuration needed to build and run one service.
 
 ## Relationship view
 
 ```text
 Application
   |-- 1 Source
-  |-- 1 RuntimeConfig
+  |-- 1 ContainerConfig
   `-- 0..n EnvironmentVariable
 
 Application 1 -------- 0..n Deployment   (database only for now)
@@ -40,21 +40,21 @@ replacing separators or unsupported characters with `-`.
 
 Blank optional references are normalized to `nil`.
 
-## RuntimeConfig
+## ContainerConfig
 
-Supported runtime values are:
+FlyNow accepts Dockerfile-based applications only. Container configuration
+contains:
 
-- `auto`
-- `dockerfile`
-- `go`
-- `node`
-- `python`
-- `static`
+- the root directory within the acquired source;
+- the Dockerfile path relative to that root directory;
+- the service port;
+- an optional health-check path;
+- the auto-deploy flag.
 
-Runtime configuration also contains the source root directory, optional build
-and start commands, service port, optional health path, and auto-deploy flag.
-
-Defaults are `runtime=auto`, `root_directory=.`, and `service_port=8080`.
+Defaults are `root_directory=.`, `dockerfile_path=Dockerfile`, and
+`service_port=8080`. Both filesystem paths must be relative and cannot escape
+the acquired source. FlyNow, rather than the user, will construct Docker build
+and run operations.
 
 ## EnvironmentVariable
 
@@ -87,8 +87,7 @@ zero value such as `false` or `nil` to be applied intentionally.
 - A name is required and limited to 100 bytes.
 - A generated slug must be non-empty and at most 63 bytes.
 - Root directories must remain inside the source directory.
-- Commands are limited to 4,000 bytes.
+- A Dockerfile path must identify a relative file inside the configured root.
 - Service ports must be between 1 and 65,535.
 - Health-check paths must begin with `/`.
 - Environment keys follow shell-style name syntax.
-

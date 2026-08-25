@@ -21,7 +21,7 @@ type Application struct {
 	Slug           string
 	LifecycleState LifecycleState
 	Source         Source
-	Runtime        RuntimeConfig
+	Container      ContainerConfig
 	Environment    []EnvironmentVariable
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

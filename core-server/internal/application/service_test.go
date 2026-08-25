@@ -25,13 +25,13 @@ func TestServiceCreate(t *testing.T) {
 	if got, want := app.Slug, "my-example-api"; got != want {
 		t.Errorf("Create() slug = %q, want %q", got, want)
 	}
-	if got, want := app.Runtime.Runtime, RuntimeAuto; got != want {
-		t.Errorf("Create() runtime = %q, want %q", got, want)
-	}
-	if got, want := app.Runtime.RootDirectory, "."; got != want {
+	if got, want := app.Container.RootDirectory, "."; got != want {
 		t.Errorf("Create() root directory = %q, want %q", got, want)
 	}
-	if got, want := app.Runtime.ServicePort, 8080; got != want {
+	if got, want := app.Container.DockerfilePath, "Dockerfile"; got != want {
+		t.Errorf("Create() Dockerfile path = %q, want %q", got, want)
+	}
+	if got, want := app.Container.ServicePort, 8080; got != want {
 		t.Errorf("Create() service port = %d, want %d", got, want)
 	}
 	if store.created == nil {
@@ -48,6 +48,8 @@ func TestServiceCreateRejectsInvalidInput(t *testing.T) {
 		{name: "missing name", input: CreateInput{SourceURL: "https://example.com/app.git"}, field: "name"},
 		{name: "invalid source", input: CreateInput{Name: "app", SourceURL: "file:///etc/passwd"}, field: "source_url"},
 		{name: "unsafe root", input: CreateInput{Name: "app", SourceURL: "https://example.com/app.git", RootDirectory: "../secret"}, field: "root_directory"},
+		{name: "unsafe Dockerfile", input: CreateInput{Name: "app", SourceURL: "https://example.com/app.git", DockerfilePath: "../Dockerfile"}, field: "dockerfile_path"},
+		{name: "Dockerfile is directory", input: CreateInput{Name: "app", SourceURL: "https://example.com/app.git", DockerfilePath: "."}, field: "dockerfile_path"},
 		{name: "invalid port", input: CreateInput{Name: "app", SourceURL: "https://example.com/app.git", ServicePort: 70000}, field: "service_port"},
 	}
 	for _, test := range tests {
@@ -73,17 +75,17 @@ func TestServiceUpdatePreservesZeroValues(t *testing.T) {
 	service := NewService(store, nil)
 
 	app, err := service.Update(context.Background(), store.app.ID.String(), UpdateInput{
-		AutoDeploy:   Change[bool]{Set: true, Value: false},
-		BuildCommand: Change[*string]{Set: true, Value: nil},
+		AutoDeploy:     Change[bool]{Set: true, Value: false},
+		DockerfilePath: Change[string]{Set: true, Value: "deploy/../Dockerfile.prod"},
 	})
 	if err != nil {
 		t.Fatalf("Update() error = %v", err)
 	}
-	if app.Runtime.AutoDeploy {
+	if app.Container.AutoDeploy {
 		t.Error("Update() auto deploy = true, want false")
 	}
-	if app.Runtime.BuildCommand != nil {
-		t.Errorf("Update() build command = %q, want nil", *app.Runtime.BuildCommand)
+	if got, want := app.Container.DockerfilePath, "Dockerfile.prod"; got != want {
+		t.Errorf("Update() Dockerfile path = %q, want %q", got, want)
 	}
 	if store.updated == nil {
 		t.Fatal("Update() did not persist application")
@@ -202,7 +204,6 @@ func (s *stubEncryptor) Seal(plaintext, additionalData []byte) ([]byte, []byte, 
 }
 
 func validApplication() Application {
-	buildCommand := "go build ./..."
 	return Application{
 		ID:             uuid.New(),
 		Name:           "Example",
@@ -211,12 +212,11 @@ func validApplication() Application {
 		Source: Source{
 			URL: "https://example.com/app.git",
 		},
-		Runtime: RuntimeConfig{
-			Runtime:       RuntimeGo,
-			RootDirectory: ".",
-			BuildCommand:  &buildCommand,
-			ServicePort:   8080,
-			AutoDeploy:    true,
+		Container: ContainerConfig{
+			RootDirectory:  ".",
+			DockerfilePath: "Dockerfile",
+			ServicePort:    8080,
+			AutoDeploy:     true,
 		},
 	}
 }

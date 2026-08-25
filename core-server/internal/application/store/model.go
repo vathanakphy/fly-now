@@ -17,7 +17,7 @@ type applicationRecord struct {
 	UpdatedAt      time.Time
 	DeletedAt      gorm.DeletedAt
 	Source         *sourceRecord       `gorm:"foreignKey:ApplicationID"`
-	Runtime        *runtimeRecord      `gorm:"foreignKey:ApplicationID"`
+	Container      *containerRecord    `gorm:"foreignKey:ApplicationID"`
 	Environment    []environmentRecord `gorm:"foreignKey:ApplicationID"`
 }
 
@@ -34,12 +34,10 @@ type sourceRecord struct {
 
 func (sourceRecord) TableName() string { return "application_sources" }
 
-type runtimeRecord struct {
+type containerRecord struct {
 	ApplicationID   uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Runtime         string
 	RootDirectory   string
-	BuildCommand    *string
-	StartCommand    *string
+	DockerfilePath  string
 	ServicePort     int
 	HealthCheckPath *string
 	AutoDeploy      bool
@@ -47,7 +45,7 @@ type runtimeRecord struct {
 	UpdatedAt       time.Time
 }
 
-func (runtimeRecord) TableName() string { return "application_runtime_configs" }
+func (containerRecord) TableName() string { return "application_container_configs" }
 
 type environmentRecord struct {
 	ID                   uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
@@ -75,7 +73,7 @@ func recordFromApplication(app application.Application) applicationRecord {
 		CreatedAt:      app.CreatedAt,
 		UpdatedAt:      app.UpdatedAt,
 		Source:         sourceRecordFromSource(app.Source),
-		Runtime:        runtimeRecordFromRuntime(app.ID, app.Runtime),
+		Container:      containerRecordFromContainer(app.ID, app.Container),
 	}
 	if app.DeletedAt != nil {
 		record.DeletedAt = gorm.DeletedAt{Time: *app.DeletedAt, Valid: true}
@@ -102,8 +100,8 @@ func (r applicationRecord) application() application.Application {
 	if r.Source != nil {
 		app.Source = r.Source.source()
 	}
-	if r.Runtime != nil {
-		app.Runtime = r.Runtime.runtime()
+	if r.Container != nil {
+		app.Container = r.Container.container()
 	}
 	for _, variable := range r.Environment {
 		app.Environment = append(app.Environment, variable.environment())
@@ -133,27 +131,23 @@ func (r sourceRecord) source() application.Source {
 	}
 }
 
-func runtimeRecordFromRuntime(applicationID uuid.UUID, runtime application.RuntimeConfig) *runtimeRecord {
-	return &runtimeRecord{
+func containerRecordFromContainer(applicationID uuid.UUID, container application.ContainerConfig) *containerRecord {
+	return &containerRecord{
 		ApplicationID:   applicationID,
-		Runtime:         string(runtime.Runtime),
-		RootDirectory:   runtime.RootDirectory,
-		BuildCommand:    runtime.BuildCommand,
-		StartCommand:    runtime.StartCommand,
-		ServicePort:     runtime.ServicePort,
-		HealthCheckPath: runtime.HealthCheckPath,
-		AutoDeploy:      runtime.AutoDeploy,
-		CreatedAt:       runtime.CreatedAt,
-		UpdatedAt:       runtime.UpdatedAt,
+		RootDirectory:   container.RootDirectory,
+		DockerfilePath:  container.DockerfilePath,
+		ServicePort:     container.ServicePort,
+		HealthCheckPath: container.HealthCheckPath,
+		AutoDeploy:      container.AutoDeploy,
+		CreatedAt:       container.CreatedAt,
+		UpdatedAt:       container.UpdatedAt,
 	}
 }
 
-func (r runtimeRecord) runtime() application.RuntimeConfig {
-	return application.RuntimeConfig{
-		Runtime:         application.Runtime(r.Runtime),
+func (r containerRecord) container() application.ContainerConfig {
+	return application.ContainerConfig{
 		RootDirectory:   r.RootDirectory,
-		BuildCommand:    r.BuildCommand,
-		StartCommand:    r.StartCommand,
+		DockerfilePath:  r.DockerfilePath,
 		ServicePort:     r.ServicePort,
 		HealthCheckPath: r.HealthCheckPath,
 		AutoDeploy:      r.AutoDeploy,

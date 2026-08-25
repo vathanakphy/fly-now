@@ -31,7 +31,7 @@ The service defines these interfaces because it is their consumer.
 
 | Method | Behavior |
 |---|---|
-| `Create` | Normalize input, generate IDs and slug, apply defaults, validate, persist |
+| `Create` | Normalize input, generate IDs and slug, apply Dockerfile defaults, validate, persist |
 | `Application` | Treat a valid UUID as an ID; otherwise query by slug |
 | `Applications` | List active applications through the store |
 | `Update` | Load, apply only explicitly set changes, validate, persist |
@@ -56,7 +56,9 @@ succeed or fail together.
 
 ## Current limitation
 
+Dockerfile existence is not checked by this service because source acquisition
+has not happened yet. The future deployment flow must verify it before building.
+
 No executable constructs this service. The future CLI composition root must
 create the PostgreSQL repository and encryptor, then inject both into
 `application.NewService`.
-

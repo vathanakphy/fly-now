@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	defaultRootDirectory = "."
-	defaultServicePort   = 8080
-	maxCommandLength     = 4000
+	defaultRootDirectory  = "."
+	defaultDockerfilePath = "Dockerfile"
+	defaultServicePort    = 8080
 )
 
 var environmentKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -59,11 +59,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Application, e
 			URL: strings.TrimSpace(input.SourceURL),
 			Ref: cleanOptional(input.SourceRef),
 		},
-		Runtime: RuntimeConfig{
-			Runtime:         input.Runtime,
+		Container: ContainerConfig{
 			RootDirectory:   strings.TrimSpace(input.RootDirectory),
-			BuildCommand:    cleanOptional(input.BuildCommand),
-			StartCommand:    cleanOptional(input.StartCommand),
+			DockerfilePath:  strings.TrimSpace(input.DockerfilePath),
 			ServicePort:     input.ServicePort,
 			HealthCheckPath: cleanOptional(input.HealthCheckPath),
 			AutoDeploy:      input.AutoDeploy,
@@ -72,6 +70,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Application, e
 	app.Slug = slug(app.Name)
 	app.Source.ApplicationID = app.ID
 	applyDefaults(&app)
+	normalizeContainerPaths(&app)
 
 	if err := validate(app); err != nil {
 		return Application{}, err
@@ -100,6 +99,7 @@ func (s *Service) Update(ctx context.Context, idOrSlug string, input UpdateInput
 	}
 
 	applyUpdate(&app, input)
+	normalizeContainerPaths(&app)
 	if err := validate(app); err != nil {
 		return Application{}, err
 	}
@@ -189,14 +189,23 @@ func (s *Service) Environment(ctx context.Context, idOrSlug string) ([]Environme
 }
 
 func applyDefaults(app *Application) {
-	if app.Runtime.Runtime == "" {
-		app.Runtime.Runtime = RuntimeAuto
+	if app.Container.RootDirectory == "" {
+		app.Container.RootDirectory = defaultRootDirectory
 	}
-	if app.Runtime.RootDirectory == "" {
-		app.Runtime.RootDirectory = defaultRootDirectory
+	if app.Container.DockerfilePath == "" {
+		app.Container.DockerfilePath = defaultDockerfilePath
 	}
-	if app.Runtime.ServicePort == 0 {
-		app.Runtime.ServicePort = defaultServicePort
+	if app.Container.ServicePort == 0 {
+		app.Container.ServicePort = defaultServicePort
+	}
+}
+
+func normalizeContainerPaths(app *Application) {
+	if app.Container.RootDirectory != "" {
+		app.Container.RootDirectory = path.Clean(app.Container.RootDirectory)
+	}
+	if app.Container.DockerfilePath != "" {
+		app.Container.DockerfilePath = path.Clean(app.Container.DockerfilePath)
 	}
 }
 
@@ -210,26 +219,20 @@ func applyUpdate(app *Application, input UpdateInput) {
 	if input.SourceRef.Set {
 		app.Source.Ref = cleanOptional(input.SourceRef.Value)
 	}
-	if input.Runtime.Set {
-		app.Runtime.Runtime = input.Runtime.Value
-	}
 	if input.RootDirectory.Set {
-		app.Runtime.RootDirectory = strings.TrimSpace(input.RootDirectory.Value)
+		app.Container.RootDirectory = strings.TrimSpace(input.RootDirectory.Value)
 	}
-	if input.BuildCommand.Set {
-		app.Runtime.BuildCommand = cleanOptional(input.BuildCommand.Value)
-	}
-	if input.StartCommand.Set {
-		app.Runtime.StartCommand = cleanOptional(input.StartCommand.Value)
+	if input.DockerfilePath.Set {
+		app.Container.DockerfilePath = strings.TrimSpace(input.DockerfilePath.Value)
 	}
 	if input.ServicePort.Set {
-		app.Runtime.ServicePort = input.ServicePort.Value
+		app.Container.ServicePort = input.ServicePort.Value
 	}
 	if input.HealthCheckPath.Set {
-		app.Runtime.HealthCheckPath = cleanOptional(input.HealthCheckPath.Value)
+		app.Container.HealthCheckPath = cleanOptional(input.HealthCheckPath.Value)
 	}
 	if input.AutoDeploy.Set {
-		app.Runtime.AutoDeploy = input.AutoDeploy.Value
+		app.Container.AutoDeploy = input.AutoDeploy.Value
 	}
 	if input.LifecycleState.Set {
 		app.LifecycleState = input.LifecycleState.Value
@@ -253,22 +256,16 @@ func validate(app Application) error {
 	if err := validateSourceURL(app.Source.URL); err != nil {
 		return err
 	}
-	if !validRuntime(app.Runtime.Runtime) {
-		return &ValidationError{Field: "runtime", Problem: "is unsupported"}
-	}
-	if err := validateRootDirectory(app.Runtime.RootDirectory); err != nil {
+	if err := validateRelativePath("root_directory", app.Container.RootDirectory, true); err != nil {
 		return err
 	}
-	if err := validateCommand("build_command", app.Runtime.BuildCommand); err != nil {
+	if err := validateRelativePath("dockerfile_path", app.Container.DockerfilePath, false); err != nil {
 		return err
 	}
-	if err := validateCommand("start_command", app.Runtime.StartCommand); err != nil {
-		return err
-	}
-	if app.Runtime.ServicePort < 1 || app.Runtime.ServicePort > 65535 {
+	if app.Container.ServicePort < 1 || app.Container.ServicePort > 65535 {
 		return &ValidationError{Field: "service_port", Problem: "must be between 1 and 65535"}
 	}
-	if app.Runtime.HealthCheckPath != nil && !strings.HasPrefix(*app.Runtime.HealthCheckPath, "/") {
+	if app.Container.HealthCheckPath != nil && !strings.HasPrefix(*app.Container.HealthCheckPath, "/") {
 		return &ValidationError{Field: "health_check_path", Problem: "must start with /"}
 	}
 	return nil
@@ -287,17 +284,13 @@ func validateSourceURL(value string) error {
 	}
 }
 
-func validateRootDirectory(value string) error {
+func validateRelativePath(field, value string, allowCurrentDirectory bool) error {
 	cleaned := path.Clean(value)
 	if value == "" || path.IsAbs(value) || cleaned == ".." || strings.HasPrefix(cleaned, "../") {
-		return &ValidationError{Field: "root_directory", Problem: "must stay inside the source directory"}
+		return &ValidationError{Field: field, Problem: "must be a relative path inside the source directory"}
 	}
-	return nil
-}
-
-func validateCommand(field string, command *string) error {
-	if command != nil && len(*command) > maxCommandLength {
-		return &ValidationError{Field: field, Problem: "must be at most 4000 bytes"}
+	if !allowCurrentDirectory && cleaned == "." {
+		return &ValidationError{Field: field, Problem: "must identify a file"}
 	}
 	return nil
 }
@@ -311,15 +304,6 @@ func validateEnvironment(input SetEnvironmentInput) error {
 		return nil
 	default:
 		return &ValidationError{Field: "target", Problem: "must be build, runtime, or both"}
-	}
-}
-
-func validRuntime(runtime Runtime) bool {
-	switch runtime {
-	case RuntimeAuto, RuntimeDockerfile, RuntimeGo, RuntimeNode, RuntimePython, RuntimeStatic:
-		return true
-	default:
-		return false
 	}
 }
 

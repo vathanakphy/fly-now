@@ -34,8 +34,8 @@ Why: the stable business layer does not depend on GORM or encryption details.
 
 ## Aggregate and transaction
 
-Application, source, runtime, and initial environment records form one aggregate.
-The repository writes them in one transaction.
+Application, source, container configuration, and initial environment records
+form one aggregate. The repository writes them in one transaction.
 
 Why: callers should never observe a partially created application.
 
@@ -56,12 +56,16 @@ domain.
 
 ## Composition root
 
-`cmd/server/main.go` constructs configuration, logging, PostgreSQL, migrations,
-and the HTTP server. The future `cmd/flynow/main.go` should similarly wire the
-repository, encryptor, service, and CLI parser.
+`cmd/server/main.go` constructs configuration, logging, PostgreSQL, and the HTTP
+server. `cmd/migrate/main.go` separately constructs only what the one-off
+migration operation needs. The future `cmd/flynow/main.go` should similarly wire
+the repository, encryptor, service, and CLI parser.
 
 Why: object construction stays at the program boundary while packages receive
 ready-to-use dependencies.
+
+Keeping migration composition separate also prevents ordinary server restarts
+from unexpectedly changing the schema.
 
 ## Soft deletion
 
@@ -69,4 +73,3 @@ Applications use a deletion timestamp. Normal GORM queries exclude deleted rows.
 
 Why: application history can remain available while the active slug becomes
 reusable.
-

@@ -16,24 +16,11 @@ type Source struct {
 	UpdatedAt     time.Time
 }
 
-// Runtime identifies a supported application build strategy.
-type Runtime string
-
-const (
-	RuntimeAuto       Runtime = "auto"
-	RuntimeDockerfile Runtime = "dockerfile"
-	RuntimeGo         Runtime = "go"
-	RuntimeNode       Runtime = "node"
-	RuntimePython     Runtime = "python"
-	RuntimeStatic     Runtime = "static"
-)
-
-// RuntimeConfig controls how FlyNow builds, starts, and checks an application.
-type RuntimeConfig struct {
-	Runtime         Runtime
+// ContainerConfig identifies the Dockerfile and runtime settings FlyNow uses
+// to build and run an application container.
+type ContainerConfig struct {
 	RootDirectory   string
-	BuildCommand    *string
-	StartCommand    *string
+	DockerfilePath  string
 	ServicePort     int
 	HealthCheckPath *string
 	AutoDeploy      bool

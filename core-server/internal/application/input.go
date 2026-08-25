@@ -11,10 +11,8 @@ type CreateInput struct {
 	Name            string
 	SourceURL       string
 	SourceRef       *string
-	Runtime         Runtime
 	RootDirectory   string
-	BuildCommand    *string
-	StartCommand    *string
+	DockerfilePath  string
 	ServicePort     int
 	HealthCheckPath *string
 	AutoDeploy      bool
@@ -25,10 +23,8 @@ type UpdateInput struct {
 	Name            Change[string]
 	SourceURL       Change[string]
 	SourceRef       Change[*string]
-	Runtime         Change[Runtime]
 	RootDirectory   Change[string]
-	BuildCommand    Change[*string]
-	StartCommand    Change[*string]
+	DockerfilePath  Change[string]
 	ServicePort     Change[int]
 	HealthCheckPath Change[*string]
 	AutoDeploy      Change[bool]

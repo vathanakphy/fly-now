@@ -1,9 +1,9 @@
 services:
   flynow:
-    image: ${FLYNOW_IMAGE:-flynow-core:local}
+    image: ${FLYNOW_DEV_IMAGE:-flynow-core-dev:local}
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     environment:
       FLYNOW_ENV: ${FLYNOW_ENV:-development}
       FLYNOW_HOST: 0.0.0.0
@@ -16,13 +16,19 @@ services:
       DATABASE_SSLMODE: disable
     ports:
       - "${FLYNOW_PORT:-8080}:8080"
+    volumes:
+      - .:/app
+      - flynow-go-mod-cache:/go/pkg/mod
+      - flynow-go-build-cache:/root/.cache/go-build
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
+    init: true
+    tty: true
+    restart: "no"
 
   migrate:
-    image: ${FLYNOW_IMAGE:-flynow-core:local}
+    image: ${FLYNOW_DEV_IMAGE:-flynow-core-dev:local}
     environment:
       FLYNOW_ENV: ${FLYNOW_ENV:-development}
       FLYNOW_HOST: 0.0.0.0
@@ -33,10 +39,14 @@ services:
       DATABASE_USER: ${DATABASE_USER:-flynow}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-flynow}
       DATABASE_SSLMODE: disable
+    volumes:
+      - .:/app
+      - flynow-go-mod-cache:/go/pkg/mod
+      - flynow-go-build-cache:/root/.cache/go-build
     depends_on:
       postgres:
         condition: service_healthy
-    entrypoint: ["/usr/local/bin/flynow-migrate"]
+    command: ["go", "run", "./cmd/migrate"]
     profiles: ["tools"]
 
   postgres:
@@ -48,7 +58,7 @@ services:
     ports:
       - "${DATABASE_PORT:-5432}:5432"
     volumes:
-      - flynow-postgres-data:/var/lib/postgresql/data
+      - flynow-postgres-dev-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -56,4 +66,6 @@ services:
       retries: 10
 
 volumes:
-  flynow-postgres-data:
+  flynow-go-mod-cache:
+  flynow-go-build-cache:
+  flynow-postgres-dev-data:

@@ -8,6 +8,61 @@ shutdown. The checklist below tracks the remaining Phase 1 backend work.
 For a quick explanation of the current architecture, domain model, services,
 database, security, and code patterns, see the [documentation index](docs/README.md).
 
+## Learning track for this codebase
+
+This project uses more architecture than the earlier calculator and todo
+projects. Learn these topics in order to understand the current code without
+getting lost.
+
+### Tonight — essential topics
+
+- [ ] **Struct methods and pointer receivers:** understand
+      `func (s *Service) Create(...)` and when code uses `Application` versus
+      `*Application`.
+- [ ] **Interfaces:** understand how `application.Store` describes behavior and
+      how `store.GORM` implements it without an `implements` keyword.
+- [ ] **Manual dependency injection:** understand how constructors and `main.go`
+      connect configuration, database, repository, service, and server objects.
+- [ ] **`context.Context`:** understand cancellation, timeouts, and why context
+      is the first argument passed from an entry point to database operations.
+- [ ] **Go error handling:** practice `%w`, `errors.Is`, `errors.As`, sentinel
+      errors, and custom error types.
+- [ ] **Unit tests with stubs:** read `service_test.go` and understand how a fake
+      store tests business rules without PostgreSQL.
+
+### Next — backend topics
+
+- [ ] **`net/http`:** handlers, `ServeMux`, request/response flow, JSON, status
+      codes, and server timeouts.
+- [ ] **Graceful shutdown:** OS signals, context cancellation, `defer`, and
+      `http.Server.Shutdown`.
+- [ ] **PostgreSQL and GORM:** connection pools, records, associations,
+      `Preload`, transactions, constraints, and soft deletion.
+- [ ] **Domain versus persistence models:** understand why
+      `application.Application` is separate from private GORM records.
+- [ ] **Generics for partial updates:** understand how `Change[T]` distinguishes
+      an omitted field from an intentional zero value.
+- [ ] **Explicit migrations:** understand immutable numbered SQL files,
+      `schema_migrations`, transactions, and the separate `cmd/migrate` command.
+
+### Practice path
+
+Use the earlier todo application as a bridge:
+
+1. Add methods to a `TaskService` struct.
+2. Define a small `TaskStore` interface.
+3. Make the JSON repository implement that interface.
+4. Inject the repository into the service through a constructor.
+5. Pass `context.Context` through service and repository operations.
+6. Add service tests with an in-memory stub store.
+7. Expose the service through `net/http` handlers.
+8. Replace JSON persistence with PostgreSQL and a transaction.
+9. Add graceful server shutdown.
+
+Concurrency topics such as goroutines, channels, and mutexes can wait until the
+deployment worker begins. The detailed current-code walkthrough is in
+[learn.md](learn.md).
+
 ## Phase 1 — CLI-first development plan
 
 **Target:** complete and validate the core platform before Year 4 starts. Work
@@ -32,6 +87,25 @@ The CLI parses input and prints output only. Business rules live in services,
 and SQL lives in repositories. This keeps the core reusable if REST or gRPC is
 added later.
 
+FlyNow supports Dockerfile-based applications only. Every application source
+must contain a Dockerfile. The user selects the source, root directory,
+Dockerfile path, service port, and optional health-check path; FlyNow owns the
+generated `docker build` and container lifecycle operations. FlyNow never runs
+user-supplied `docker build` or `docker run` shell commands.
+
+```text
+application source + container configuration
+                    │
+                    ▼
+          verify selected Dockerfile
+                    │
+                    ▼
+       FlyNow-controlled image build
+                    │
+                    ▼
+       FlyNow-controlled container
+```
+
 Long-running work must not run inside the short-lived CLI process. When
 deployments are introduced, a separate worker will consume RabbitMQ tasks:
 
@@ -52,42 +126,56 @@ flynow deploy
 - [x] Load typed configuration from environment variables and validate it.
 - [x] Add structured logging with `log/slog`.
 - [x] Create and verify a PostgreSQL connection pool.
-- [x] Add embedded, transactional database migrations.
+- [x] Add embedded, transactional database migrations with an explicit
+      `cmd/migrate` command.
 - [x] Add an HTTP server and database-aware `GET /health` foundation endpoint.
 - [x] Handle SIGINT/SIGTERM and graceful shutdown.
 - [x] Containerize FlyNow and PostgreSQL with Docker Compose.
 - [x] Add basic configuration and health-handler tests.
 
-**Exit criteria:** `docker compose up -d --build` starts the current stack,
-`/health` returns HTTP 200, `go test ./...` passes, and Compose can stop FlyNow
-gracefully.
+**Exit criteria:** the explicit migration command succeeds, `docker compose up
+-d --build` starts the current stack, `/health` returns HTTP 200, `go test ./...`
+passes, and Compose can stop FlyNow gracefully.
 
 ### 2. Application Management and CLI — current stage
 
 #### 2.1 Domain model
 
 - [x] Create focused application and configuration model files.
-- [x] Define pure `Application`, `Source`, `RuntimeConfig`, and
+- [x] Define pure `Application`, `Source`, `ContainerConfig`, and
       `EnvironmentVariable` domain types without GORM dependencies.
 - [x] Define create and update input types separately from stored models.
 - [x] Define lifecycle values in Go; add transition rules when runtime behavior
       is implemented.
 - [x] Keep database and CLI details out of domain types.
+- [x] Replace `RuntimeConfig` with Docker-specific `ContainerConfig`.
+- [x] Define `root_directory`, `dockerfile_path`, `service_port`, optional
+      `health_check_path`, and `auto_deploy` as the complete container config.
+- [x] Remove runtime detection, language runtime values, build commands, and
+      start commands from domain and input types.
+- [x] Default `root_directory` to `.`, `dockerfile_path` to `Dockerfile`, and
+      `service_port` to `8080`.
 
 #### 2.2 Database schema
 
 - [x] Create the applications, sources, runtime configuration, environment
       variables, and deployments migration.
-- [ ] Review required constraints for slug format, lifecycle state, runtime,
+- [ ] Review required constraints for slug format, lifecycle state, container,
       environment target, service port, and deployment status.
 - [x] Use soft deletion for applications.
+- [x] Add a new numbered migration for Docker-only container configuration;
+      never rewrite the existing `000002` migration.
+- [x] Add `dockerfile_path` and remove obsolete runtime, build-command, and
+      start-command columns.
+- [ ] Add constraints for safe container configuration and supported status
+      values.
 - [ ] Add migration integration tests against PostgreSQL.
 - [ ] Never edit an applied migration; add a new numbered migration instead.
 
 #### 2.3 PostgreSQL repository
 
 - [x] Isolate GORM records and queries in `internal/application/store`.
-- [x] Insert an application, source, runtime configuration, and environment
+- [x] Insert an application, source, container configuration, and environment
       variables atomically.
 - [x] Get an active application by ID or slug.
 - [x] List active applications with deterministic ordering.
@@ -96,18 +184,26 @@ gracefully.
 - [x] Add, replace, list, and remove environment variables.
 - [x] Map missing rows and duplicate slugs to application errors.
 - [x] Wrap persistence errors with operation context.
+- [x] Replace runtime record mappings with Docker container configuration
+      mappings.
+- [x] Fix application/environment not-found error mapping and consistently wrap
+      repository errors with operation context.
 
 #### 2.4 Application service
 
 - [x] Create `internal/application/service.go` and `errors.go`.
 - [x] Validate application names and generate normalized slugs.
 - [x] Validate source URLs and normalize optional references.
-- [x] Validate root directory, commands, port, and health-check path.
-- [x] Treat `runtime=auto` and missing commands as detection requests.
+- [x] Validate root directory, Dockerfile path, port, and health-check path.
 - [x] Encrypt environment values before calling the store.
 - [x] Never return ciphertext, nonces, or decrypted sensitive values from list
       operations.
 - [x] Use database transactions for multi-table creation and updates.
+- [x] Replace command/runtime validation with Dockerfile-only configuration
+      validation.
+- [x] Validate that root and Dockerfile paths are relative, clean, and cannot
+      escape the checked-out source directory.
+- [ ] Check that the selected Dockerfile exists only after source acquisition.
 
 #### 2.5 Environment encryption
 
@@ -129,6 +225,9 @@ gracefully.
 - [ ] Implement `flynow app get <id-or-slug>`.
 - [ ] Implement `flynow app update <id-or-slug>`.
 - [ ] Implement `flynow app delete <id-or-slug>`.
+- [ ] Accept source, root directory, Dockerfile path, service port, and optional
+      health-check path in application create/update commands.
+- [ ] Do not accept raw `docker build` or `docker run` commands from users.
 - [ ] Implement `flynow env set <app> KEY=VALUE`.
 - [ ] Implement `flynow env unset <app> KEY`.
 - [ ] Implement `flynow env list <app>` with sensitive values masked.
@@ -142,25 +241,29 @@ gracefully.
 - [ ] Integration-test repository operations against real PostgreSQL.
 - [ ] Test duplicate slug, missing application, and deleted application cases.
 - [ ] Test that a failed multi-table insert leaves no partial application.
+- [x] Test default/custom Dockerfile paths and rejected path traversal.
 - [ ] Test CLI argument parsing and exit codes.
 - [x] Verify application service list results omit encrypted value material.
 - [ ] Verify sensitive values never appear in future CLI output or logs.
 
 **Exit criteria:** the CLI can create, list, inspect, update, and delete an
-application; configuration persists across CLI runs and container restarts;
-environment values are encrypted at rest; invalid operations are rejected; and
-all unit and PostgreSQL integration tests pass.
+application; its Dockerfile configuration persists across CLI runs and
+container restarts; environment values are encrypted at rest; invalid
+operations are rejected; and all unit and PostgreSQL integration tests pass.
 
 ### 3. Container Runtime
 
 - [ ] Add `internal/runtime` only when implementation starts.
 - [ ] Define the smallest interface required for Docker operations.
 - [ ] Connect to Docker with explicit configuration and timeouts.
+- [ ] Build images only through FlyNow-controlled Docker API calls.
 - [ ] Create, start, stop, restart, inspect, and remove containers.
 - [ ] Add FlyNow labels to every managed Docker resource.
 - [ ] Refuse to modify containers not owned by FlyNow.
 - [ ] Create a dedicated network for managed applications.
 - [ ] Persist the association between deployments and runtime instances.
+- [ ] Apply explicit CPU, memory, timeout, and output limits to builds and
+      containers.
 - [ ] Test the complete lifecycle using disposable test containers.
 
 **Exit criteria:** a service test can manage one labeled container through its
@@ -171,8 +274,8 @@ full lifecycle without changing unrelated Docker resources.
 #### 4.1 Durable deployment state
 
 - [ ] Define allowed deployment statuses and transitions.
-- [ ] Create an immutable snapshot of source, runtime, commands, and environment
-      configuration for every deployment.
+- [ ] Create an immutable snapshot of source, Dockerfile container
+      configuration, and environment configuration for every deployment.
 - [ ] Record trigger type, source revision, image reference, timestamps, attempts,
       and sanitized failure information.
 - [ ] Prevent conflicting active deployments for one application.
@@ -221,14 +324,19 @@ and exhausted failures are visible in PostgreSQL and the dead-letter queue.
 - [ ] Resolve a Git branch or tag to an exact commit SHA.
 - [ ] Verify uploaded artifacts using their stored checksum.
 - [ ] Prevent path traversal when extracting archives.
-- [ ] Detect supported runtimes when configuration uses `auto`.
-- [ ] Run user build commands only inside isolated build containers.
+- [ ] Resolve the configured root directory without allowing path traversal.
+- [ ] Resolve the Dockerfile path relative to the configured root directory.
+- [ ] Reject deployment when the selected Dockerfile is missing or inaccessible.
+- [ ] Generate image names, tags, and build options inside FlyNow.
+- [ ] Never execute user-provided `docker build` or `docker run` shell commands.
 - [ ] Build an immutable image and record its digest/reference.
 - [ ] Bound build time, output size, CPU, memory, and log volume.
 - [ ] Clean temporary source and build resources after success or failure.
 
-**Exit criteria:** representative Go, Node.js, and uploaded-source applications
-produce repeatable images, while invalid or unsafe sources fail cleanly.
+**Exit criteria:** representative Git and uploaded sources containing valid
+Dockerfiles produce repeatable images; missing Dockerfiles, invalid paths, and
+unsafe sources fail cleanly; and no application process runs directly on the
+FlyNow host.
 
 ### 6. Networking and Routing
 
@@ -262,7 +370,7 @@ enough recent logs and metrics to diagnose a failure.
 - [ ] Record terminal failures instead of creating infinite restart loops.
 - [ ] Apply CPU and memory limits to every application container.
 - [ ] Inject decrypted environment values only into the intended build/runtime.
-- [ ] Recreate containers safely when runtime configuration changes.
+- [ ] Recreate containers safely when container configuration changes.
 
 **Exit criteria:** FlyNow recovers expected failures, reports unrecoverable ones,
 enforces resource limits, and does not leak sensitive configuration.
@@ -281,7 +389,7 @@ applications sleep and wake without losing durable state.
 
 ### 10. Core Validation
 
-- [ ] Test Git and uploaded-source deployment paths.
+- [ ] Test Git and uploaded-source Dockerfile deployment paths.
 - [ ] Test create, deploy, route, observe, restart, scale, sleep, and delete.
 - [ ] Test PostgreSQL, RabbitMQ, worker, Docker, and FlyNow restart recovery.
 - [ ] Test failed builds, invalid sources, unhealthy apps, and unavailable
@@ -299,14 +407,61 @@ remains.
 
 Requirement: Docker with Compose. Compose builds and runs FlyNow and PostgreSQL.
 
+### Development with automatic reload
+
+Build the development image and apply pending migrations when setting up the
+database or after a schema change:
+
 ```sh
-docker compose up -d
+docker compose -f docker-compose.dev.yml build
+docker compose -f docker-compose.dev.yml run --rm migrate
+```
+
+Then start development mode:
+
+```sh
+docker compose -f docker-compose.dev.yml up
+```
+
+The standalone development stack starts FlyNow and PostgreSQL. FlyNow
+bind-mounts the project and uses Air to rebuild and restart only the Go process
+when a `.go` file changes. The development image must be rebuilt only when
+`Dockerfile.dev` or its installed tools change. Go module downloads, build
+output, and development database data are kept in named Docker volumes.
+
+Normal server restarts do not run migrations. Run the one-off `migrate` service
+again only after pulling or creating a new schema migration.
+
+After changing `go.mod` or `go.sum`, restart the service so the running process
+loads the new module configuration:
+
+```sh
+docker compose -f docker-compose.dev.yml restart flynow
+```
+
+Stop the development stack with:
+
+```sh
+docker compose -f docker-compose.dev.yml down
+```
+
+### Production-style local stack
+
+```sh
+docker compose build
+docker compose run --rm migrate
+docker compose up -d flynow
 ```
 
 FlyNow waits for PostgreSQL's health check before starting. Inside the Compose
 network it connects to the database using the service name `postgres`; using
 `localhost` there would incorrectly refer to the FlyNow container itself.
-PostgreSQL is not published to the host; only FlyNow's HTTP port is exposed.
+The local Compose configuration publishes PostgreSQL on
+`${DATABASE_PORT:-5432}` and FlyNow on `${FLYNOW_PORT:-8080}`.
+
+Later server restarts use `docker compose up -d flynow` without running
+migrations. Run `docker compose run --rm migrate` explicitly after a schema
+change.
 
 The documented development values are defaults, so copying `.env.example` to
 `.env` is optional. Compose reads `.env` automatically when overriding values.
@@ -339,6 +494,7 @@ data.
 
 ```text
 cmd/server/main.go          dependency wiring and process lifecycle
+cmd/migrate/main.go         explicit one-off database migration command
 internal/config             typed environment configuration and validation
 internal/database           GORM, PostgreSQL pool, and startup connectivity
 internal/application        domain models, service, validation, and store contract
@@ -356,9 +512,9 @@ Only repositories depend on GORM; services and transports will depend on
 application behavior instead. GORM `AutoMigrate` is intentionally not used:
 versioned SQL migrations remain the schema authority. The server depends on the
 smallest capability needed by health checks (`Ping`), which keeps handler tests
-fast. Migrations are embedded in the binary and run transactionally under a
-PostgreSQL advisory lock, making startup self-contained and safe when multiple
-instances start.
+fast. The server never applies migrations during startup. `cmd/migrate` embeds
+and runs them transactionally under a PostgreSQL advisory lock as an explicit
+operator or deployment action.
 
 Future `application`, `deployment`, `source`, `build`, `runtime`, `routing`,
 `monitoring`, and `transport` packages can be added under `internal/` as real

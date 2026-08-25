@@ -9,7 +9,6 @@ import (
 
 	"github.com/flynow/core-server/internal/config"
 	"github.com/flynow/core-server/internal/database"
-	"github.com/flynow/core-server/internal/database/migrations"
 	"github.com/flynow/core-server/internal/server"
 )
 
@@ -40,11 +39,6 @@ func run(logger *slog.Logger) error {
 		}
 	}()
 	logger.Info("database connected", "host", cfg.Database.Host, "database", cfg.Database.Name)
-
-	if err := migrations.Run(startupCtx, postgres.SQL()); err != nil {
-		return err
-	}
-	logger.Info("database migrations complete")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
