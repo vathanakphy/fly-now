@@ -1,5 +1,6 @@
 package com.flynow.api.auth.session;
 
+import com.flynow.api.entities.AuthSession;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;

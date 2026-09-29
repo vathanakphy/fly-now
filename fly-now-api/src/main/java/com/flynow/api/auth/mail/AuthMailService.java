@@ -1,7 +1,7 @@
 package com.flynow.api.auth.mail;
 
 import com.flynow.api.auth.AuthProperties;
-import com.flynow.api.user.UserAccount;
+import com.flynow.api.entities.UserAccount;
 import com.flynow.api.auth.token.SecureTokenService.IssuedToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;

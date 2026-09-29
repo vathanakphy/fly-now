@@ -1,6 +1,4 @@
-package com.flynow.api.auth.audit;
-
-import com.flynow.api.user.UserAccount;
+package com.flynow.api.entities;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

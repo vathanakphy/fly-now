@@ -1,6 +1,7 @@
 package com.flynow.api.auth.audit;
 
-import com.flynow.api.user.UserAccount;
+import com.flynow.api.entities.AuthAuditEvent;
+import com.flynow.api.entities.UserAccount;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

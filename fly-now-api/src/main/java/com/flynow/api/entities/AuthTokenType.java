@@ -1,4 +1,4 @@
-package com.flynow.api.auth.token;
+package com.flynow.api.entities;
 
 public enum AuthTokenType {
     PASSWORD_RESET

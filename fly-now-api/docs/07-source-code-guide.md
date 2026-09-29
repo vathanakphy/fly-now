@@ -88,7 +88,7 @@ Converts filter-chain authentication failures to 401 and authorization failures 
 
 ## Refresh sessions
 
-### `auth/session/AuthSession.java`
+### `entities/AuthSession.java`
 
 JPA entity for `auth_sessions`. It stores only the refresh-token hash and tracks family, expiry, rotation, revocation, IP, and user agent. `rotate` and `revoke` are controlled state transitions.
 
@@ -102,11 +102,11 @@ Issues and rotates refresh sessions, detects reuse, revokes tokens/families, lis
 
 ## Single-use auth tokens
 
-### `auth/token/AuthToken.java`
+### `entities/AuthToken.java`
 
 JPA entity for one-time tokens. It knows whether it is unused/unexpired and can mark itself consumed.
 
-### `auth/token/AuthTokenType.java`
+### `entities/AuthTokenType.java`
 
 Currently contains only `PASSWORD_RESET`. An enum prevents arbitrary token-purpose strings in Java.
 
@@ -126,7 +126,7 @@ Builds and sends password-reset emails through `JavaMailSender`. It returns with
 
 ## Audit
 
-### `auth/audit/AuthAuditEvent.java`
+### `entities/AuthAuditEvent.java`
 
 JPA entity for security event history: event type, success, optional user, network/client context, detail, and timestamp.
 
@@ -138,23 +138,25 @@ Standard Spring Data repository for storing/querying audit events.
 
 Creates audit rows and truncates untrusted strings to database limits before persistence.
 
-## User domain
+## Centralized user persistence model
 
-### `user/UserAccount.java`
+### `entities/UserAccount.java`
 
 JPA entity for `users`. Besides field mappings, it owns valid state changes: successful/failed login, timed unlock, password/profile update, JWT invalidation, and administrator role/status changes.
+
+### `entities/UserRole.java`
+
+Defines `USER` and `ADMIN` authorization roles.
+
+### `entities/AccountStatus.java`
+
+Defines `ACTIVE`, `LOCKED`, and `DISABLED` account states.
+
+## User domain
 
 ### `user/UserAccountRepository.java`
 
 Provides user lookup and uniqueness checks by username/email plus standard CRUD/pagination.
-
-### `user/UserRole.java`
-
-Defines `USER` and `ADMIN` authorization roles.
-
-### `user/AccountStatus.java`
-
-Defines `ACTIVE`, `LOCKED`, and `DISABLED` account states.
 
 ### `user/UserController.java`
 

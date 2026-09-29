@@ -2,7 +2,7 @@
 
 ## 1. Requirements
 
-- JDK 17 or newer. The current Maven build targets Java 17 even if Java 21 is installed.
+- JDK 21. The Maven build compiles and runs the project against Java 21.
 - Maven
 - PostgreSQL listening on `localhost:5432`
 - A PostgreSQL database named `fly_now`

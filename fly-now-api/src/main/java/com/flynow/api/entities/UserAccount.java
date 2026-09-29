@@ -1,4 +1,4 @@
-package com.flynow.api.user;
+package com.flynow.api.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

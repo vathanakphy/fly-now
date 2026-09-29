@@ -1,10 +1,11 @@
 package com.flynow.api.auth.session;
 
 import com.flynow.api.auth.AuthProperties;
-import com.flynow.api.user.AccountStatus;
-import com.flynow.api.user.UserAccount;
 import com.flynow.api.auth.security.JwtTokenProvider;
 import com.flynow.api.auth.token.SecureTokenService;
+import com.flynow.api.entities.AccountStatus;
+import com.flynow.api.entities.AuthSession;
+import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

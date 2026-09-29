@@ -7,7 +7,8 @@ Spring Boot backend for the FlyNow PaaS project. The current implementation prov
 ```text
 com.flynow.api
 ├── auth/       authentication, JWT, refresh sessions, passwords, audit
-├── user/       user entity, profiles, roles, statuses, administration
+├── user/       profiles, user repositories, and administration
+├── entities/   centralized JPA entities and persistence enums
 └── shared/     configuration, errors, responses, logging
 ```
 
@@ -39,7 +40,7 @@ Start with [docs/README.md](docs/README.md). It links to beginner-focused explan
 
 ## Important development notes
 
-- The build currently targets Java 17.
+- The build targets Java 21.
 - Local schema synchronization uses Hibernate `ddl-auto=update`.
 - Spring Boot does not automatically load `.env`; `.env.example` is a deployment/configuration reference.
 - Blank JWT keys generate an ephemeral local RSA pair, so tokens stop working after restart.

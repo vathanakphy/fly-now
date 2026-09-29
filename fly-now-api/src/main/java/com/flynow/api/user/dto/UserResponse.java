@@ -1,6 +1,6 @@
 package com.flynow.api.user.dto;
 
-import com.flynow.api.user.UserAccount;
+import com.flynow.api.entities.UserAccount;
 
 import java.time.Instant;
 

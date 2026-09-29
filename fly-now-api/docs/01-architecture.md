@@ -30,6 +30,7 @@ com.flynow.api
 │   ├── security
 │   ├── session
 │   └── token
+├── entities
 ├── user
 │   └── dto
 └── shared
@@ -45,7 +46,11 @@ Owns authentication: credentials, login, JWT creation/validation, refresh sessio
 
 ### `user`
 
-Owns the user model: the `users` table, profiles, roles, account statuses, self-service profile endpoints, and administrator user management.
+Owns user use cases: the user repository, profiles, self-service profile endpoints, and administrator user management.
+
+### `entities`
+
+Centralizes JPA persistence models and their enums. It currently contains `UserAccount`, `AuthSession`, `AuthToken`, `AuthAuditEvent`, `UserRole`, `AccountStatus`, and `AuthTokenType`. Feature repositories and services import these models, while HTTP DTOs remain inside their feature modules.
 
 ### `shared`
 
@@ -107,7 +112,7 @@ Authentication and users are separate because they change for different reasons:
 - `auth` answers “How does someone prove identity and maintain a session?”
 - `user` answers “What is a user, profile, role, and account state?”
 
-The auth module is allowed to depend on the user model because authentication must load users. The user administrator service is allowed to revoke auth sessions when a role or status changes. This is an intentional cross-feature collaboration through services, not duplicated logic.
+Both feature modules depend on the centralized `entities` package. The user administrator service is allowed to revoke auth sessions when a role or status changes. This is an intentional cross-feature collaboration through services, not duplicated logic. Entities contain persistence state only; feature behavior and API contracts remain in `auth` and `user`.
 
 ## 6. Spring annotations used frequently
 

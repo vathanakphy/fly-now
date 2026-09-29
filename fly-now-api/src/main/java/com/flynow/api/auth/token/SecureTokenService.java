@@ -1,7 +1,9 @@
 package com.flynow.api.auth.token;
 
 import com.flynow.api.auth.AuthProperties;
-import com.flynow.api.user.UserAccount;
+import com.flynow.api.entities.AuthToken;
+import com.flynow.api.entities.AuthTokenType;
+import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,7 @@
 package com.flynow.api.user;
 
 import com.flynow.api.auth.audit.AuthAuditService;
+import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.exception.ConflictException;
 import com.flynow.api.shared.exception.ResourceNotFoundException;
 import com.flynow.api.user.dto.UpdateProfileRequest;

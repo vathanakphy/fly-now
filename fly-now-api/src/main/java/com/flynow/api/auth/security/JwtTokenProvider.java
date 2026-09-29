@@ -1,6 +1,6 @@
 package com.flynow.api.auth.security;
 
-import com.flynow.api.user.UserAccount;
+import com.flynow.api.entities.UserAccount;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;

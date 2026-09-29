@@ -1,6 +1,9 @@
 package com.flynow.api.user;
 
 import com.flynow.api.auth.audit.AuthAuditService;
+import com.flynow.api.entities.AccountStatus;
+import com.flynow.api.entities.UserAccount;
+import com.flynow.api.entities.UserRole;
 import com.flynow.api.user.dto.UserResponse;
 import com.flynow.api.auth.session.RefreshSessionService;
 import com.flynow.api.shared.exception.BadRequestException;

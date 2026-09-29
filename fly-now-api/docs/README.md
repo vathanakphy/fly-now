@@ -11,6 +11,9 @@ This directory explains the current Spring Boot application as it exists in the 
 5. [API reference](05-api-reference.md) — every current HTTP endpoint and example requests.
 6. [Database and security decisions](06-database-and-security.md) — tables, token storage, cookies, transactions, and production limitations.
 7. [Source code guide](07-source-code-guide.md) — the purpose of every current Java source file.
+8. [Product and infrastructure PRD](08-product-and-infrastructure-prd.md) — product scope, React/Spring/Go boundaries, data stores, system flows, security, and delivery phases.
+9. [Stage 1 database design](09-stage-1-database-design.md) — table relationships, ownership, source versioning, runtime configuration, secrets, readiness, and deletion decisions.
+10. [Stage 1 PostgreSQL schema](sql/stage-1-schema.sql) — executable database definition derived from the Stage 1 task tracker.
 
 ## Current scope
 

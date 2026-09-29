@@ -1,4 +1,4 @@
-package com.flynow.api.user;
+package com.flynow.api.entities;
 
 public enum AccountStatus {
     ACTIVE,
