@@ -26,10 +26,6 @@ Stores refresh sessions. Important columns include token hash, user, token famil
 
 Stores single-use password-reset tokens. Only SHA-256 hashes are stored. `used_at` prevents a second use.
 
-### `auth_audit_events`
-
-Stores security-relevant event type, success state, optional user, IP address, user agent, details, and time.
-
 ## 3. Why token hashes are stored
 
 A database leak should not immediately reveal usable refresh/reset tokens. The API generates high-entropy random values, gives the raw token to the client, and stores only a SHA-256 hash.
@@ -54,7 +50,7 @@ Tradeoff: every authenticated request performs a database lookup. This favors im
 
 ## 7. Transactions and locking
 
-- Registration uses a transaction so user creation and audit work are consistent.
+- Registration uses a transaction so user creation is atomic.
 - Token consumption uses a pessimistic write lock so one reset token cannot be consumed concurrently twice.
 - Refresh rotation uses a pessimistic write lock so one refresh token cannot be rotated concurrently twice.
 - Refresh reuse revocation uses `noRollbackFor=BadRequestException`, allowing the family-revocation security change to commit even though the request returns an error.
@@ -85,7 +81,7 @@ Before production:
 - configure and secure SMTP;
 - add rate limiting for register/login/forgot/reset/refresh;
 - add authentication and authorization tests;
-- add cleanup jobs for expired sessions, tokens, and old audit events;
+- add cleanup jobs for expired sessions and tokens;
 - configure trusted proxy headers before using client IP for security decisions;
 - define backup, recovery, monitoring, and key-rotation procedures;
 - review Swagger/Actuator exposure;

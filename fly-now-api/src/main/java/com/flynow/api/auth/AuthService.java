@@ -1,13 +1,12 @@
 package com.flynow.api.auth;
 
-import com.flynow.api.auth.audit.AuthAuditService;
 import com.flynow.api.auth.dto.ChangePasswordRequest;
 import com.flynow.api.auth.dto.LoginRequest;
 import com.flynow.api.auth.dto.LoginResponse;
 import com.flynow.api.auth.dto.RegisterRequest;
 import com.flynow.api.auth.dto.RegisterResponse;
 import com.flynow.api.auth.dto.ResetPasswordRequest;
-import com.flynow.api.auth.mail.AuthMailService;
+import com.flynow.api.auth.mail.EmailService;
 import com.flynow.api.auth.security.JwtProperties;
 import com.flynow.api.auth.security.PasswordSafetyService;
 import com.flynow.api.auth.session.RefreshSessionService;
@@ -50,13 +49,12 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final SecureTokenService secureTokenService;
     private final RefreshSessionService sessionService;
-    private final AuthMailService mailService;
+    private final EmailService emailService;
     private final AccountSecurityService accountSecurityService;
-    private final AuthAuditService auditService;
     private final PasswordSafetyService passwordSafetyService;
 
     @Transactional
-    public RegisterResponse register(RegisterRequest request, ClientContext context) {
+    public RegisterResponse register(RegisterRequest request) {
         String username = normalize(request.username());
         String email = normalize(request.email());
         if (userRepository.existsByUsername(username)) {
@@ -86,7 +84,6 @@ public class AuthService {
             throw new ConflictException("Username or email is already in use");
         }
 
-        auditService.record(user, "REGISTERED", true, context.ipAddress(), context.userAgent(), null);
         return new RegisterResponse(user.getId(), user.getName(), user.getUsername(), user.getEmail());
     }
 
@@ -96,7 +93,7 @@ public class AuthService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, request.password()));
         } catch (AuthenticationException exception) {
-            accountSecurityService.recordLoginFailure(username, context.ipAddress(), context.userAgent());
+            accountSecurityService.recordLoginFailure(username);
             throw new BadCredentialsException("Invalid username or password");
         }
 
@@ -108,29 +105,20 @@ public class AuthService {
 
     @Transactional(noRollbackFor = BadRequestException.class)
     public LoginResult refresh(String refreshToken, ClientContext context) {
-        try {
-            IssuedSession session = sessionService.rotate(refreshToken, context);
-            auditService.record(null, "TOKEN_REFRESHED", true, context.ipAddress(), context.userAgent(), null);
-            return authenticatedResult(session);
-        } catch (BadRequestException exception) {
-            auditService.record(null, "TOKEN_REFRESH_FAILED", false,
-                    context.ipAddress(), context.userAgent(), exception.getMessage());
-            throw exception;
-        }
+        IssuedSession session = sessionService.rotate(refreshToken, context);
+        return authenticatedResult(session);
     }
 
     @Transactional
-    public void logout(String refreshToken, ClientContext context) {
+    public void logout(String refreshToken) {
         sessionService.revokeToken(refreshToken, "LOGOUT");
-        auditService.record(null, "LOGOUT", true, context.ipAddress(), context.userAgent(), null);
     }
 
     @Transactional
-    public void logoutAll(Long userId, ClientContext context) {
+    public void logoutAll(Long userId) {
         UserAccount user = requireUser(userId);
         user.invalidateAccessTokens();
         sessionService.revokeAll(userId, "LOGOUT_ALL");
-        auditService.record(user, "LOGOUT_ALL", true, context.ipAddress(), context.userAgent(), null);
     }
 
     @Transactional
@@ -139,27 +127,25 @@ public class AuthService {
                 .filter(user -> user.getStatus() != AccountStatus.DISABLED)
                 .ifPresent(user -> {
                     IssuedToken token = secureTokenService.issueActionToken(user, AuthTokenType.PASSWORD_RESET);
-                    mailService.sendPasswordReset(user, token);
+                    emailService.sendPasswordReset(user, token);
                 });
     }
 
     @Transactional
-    public void resetPassword(ResetPasswordRequest request, ClientContext context) {
+    public void resetPassword(ResetPasswordRequest request) {
         UserAccount user = secureTokenService.consume(request.token(), AuthTokenType.PASSWORD_RESET);
         changePassword(user, request.newPassword());
         sessionService.revokeAll(user.getId(), "PASSWORD_RESET");
-        auditService.record(user, "PASSWORD_RESET", true, context.ipAddress(), context.userAgent(), null);
     }
 
     @Transactional
-    public void changePassword(Long userId, ChangePasswordRequest request, ClientContext context) {
+    public void changePassword(Long userId, ChangePasswordRequest request) {
         UserAccount user = requireUser(userId);
         if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
             throw new BadCredentialsException("Current password is incorrect");
         }
         changePassword(user, request.newPassword());
         sessionService.revokeAll(userId, "PASSWORD_CHANGED");
-        auditService.record(user, "PASSWORD_CHANGED", true, context.ipAddress(), context.userAgent(), null);
     }
 
     @Transactional(readOnly = true)
@@ -175,7 +161,6 @@ public class AuthService {
     private LoginResult completeLogin(UserAccount user, ClientContext context) {
         user.recordSuccessfulLogin(Instant.now());
         IssuedSession session = sessionService.issue(user, context);
-        auditService.record(user, "LOGIN_SUCCEEDED", true, context.ipAddress(), context.userAgent(), null);
         return authenticatedResult(session);
     }
 

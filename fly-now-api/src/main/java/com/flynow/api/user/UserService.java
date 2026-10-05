@@ -1,6 +1,5 @@
 package com.flynow.api.user;
 
-import com.flynow.api.auth.audit.AuthAuditService;
 import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.exception.ConflictException;
 import com.flynow.api.shared.exception.ResourceNotFoundException;
@@ -18,8 +17,6 @@ import java.util.Locale;
 public class UserService {
 
     private final UserAccountRepository userRepository;
-    private final AuthAuditService auditService;
-
     @Transactional(readOnly = true)
     public UserResponse me(Long userId) {
         return UserResponse.from(requireUser(userId));
@@ -28,9 +25,7 @@ public class UserService {
     @Transactional
     public UserResponse updateProfile(
             Long userId,
-            UpdateProfileRequest request,
-            String ipAddress,
-            String userAgent
+            UpdateProfileRequest request
     ) {
         UserAccount user = requireUser(userId);
         String email = normalize(request.email());
@@ -44,7 +39,6 @@ public class UserService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Email is already in use");
         }
-        auditService.record(user, "PROFILE_UPDATED", true, ipAddress, userAgent, null);
         return UserResponse.from(user);
     }
 

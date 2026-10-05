@@ -6,7 +6,7 @@ Spring Boot backend for the FlyNow PaaS project. The current implementation prov
 
 ```text
 com.flynow.api
-├── auth/       authentication, JWT, refresh sessions, passwords, audit
+├── auth/       authentication, JWT, refresh sessions, and passwords
 ├── user/       profiles, user repositories, and administration
 ├── entities/   centralized JPA entities and persistence enums
 └── shared/     configuration, errors, responses, logging
@@ -44,5 +44,5 @@ Start with [docs/README.md](docs/README.md). It links to beginner-focused explan
 - Local schema synchronization uses Hibernate `ddl-auto=update`.
 - Spring Boot does not automatically load `.env`; `.env.example` is a deployment/configuration reference.
 - Blank JWT keys generate an ephemeral local RSA pair, so tokens stop working after restart.
-- Password-reset delivery requires SMTP and `app.auth.mail-enabled=true`.
+- Password-reset messages are logged locally by default. SMTP delivery requires `app.auth.mail-enabled=true`.
 - Production still requires controlled migrations, persistent keys, HTTPS, rate limiting, tests, monitoring, and secret management.

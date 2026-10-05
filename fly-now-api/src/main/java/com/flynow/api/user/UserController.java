@@ -37,21 +37,13 @@ public class UserController {
     public ApiResponse<UserResponse> updateProfile(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateProfileRequest request,
-            HttpServletRequest requestContext
-    ) {
+            HttpServletRequest requestContext) {
         return ApiResponse.success("Profile updated successfully", userService.updateProfile(
                 userId(jwt),
-                request,
-                truncate(requestContext.getRemoteAddr(), 64),
-                truncate(requestContext.getHeader("User-Agent"), 500)
-        ));
+                request));
     }
 
     private Long userId(Jwt jwt) {
         return Long.valueOf(jwt.getSubject());
-    }
-
-    private String truncate(String value, int maximumLength) {
-        return value == null || value.length() <= maximumLength ? value : value.substring(0, maximumLength);
     }
 }

@@ -24,7 +24,7 @@ The response travels back through the same layers. Controllers return DTOs wrapp
 com.flynow.api
 ├── FlyNowApiApplication.java
 ├── auth
-│   ├── audit
+│   ├── authorization
 │   ├── dto
 │   ├── mail
 │   ├── security
@@ -42,7 +42,7 @@ com.flynow.api
 
 ### `auth`
 
-Owns authentication: credentials, login, JWT creation/validation, refresh sessions, password reset tokens, security configuration, and authentication audit events.
+Owns authentication: credentials, login, JWT creation/validation, refresh sessions, password reset tokens, and security configuration.
 
 ### `user`
 
@@ -50,7 +50,7 @@ Owns user use cases: the user repository, profiles, self-service profile endpoin
 
 ### `entities`
 
-Centralizes JPA persistence models and their enums. It currently contains `UserAccount`, `AuthSession`, `AuthToken`, `AuthAuditEvent`, `UserRole`, `AccountStatus`, and `AuthTokenType`. Feature repositories and services import these models, while HTTP DTOs remain inside their feature modules.
+Centralizes JPA persistence models and their enums. It currently contains `UserAccount`, `AuthSession`, `AuthToken`, `UserRole`, `AccountStatus`, and `AuthTokenType`. Feature repositories and services import these models, while HTTP DTOs remain inside their feature modules.
 
 ### `shared`
 

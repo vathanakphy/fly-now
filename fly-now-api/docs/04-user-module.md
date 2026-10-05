@@ -17,7 +17,7 @@ The user module owns user data and user-management behavior. Authentication uses
 | `password` | One-way encoded password, never returned. |
 | `role` | `USER` or `ADMIN`. |
 | `status` | `ACTIVE`, `LOCKED`, or `DISABLED`. |
-| `passwordChangedAt` | Security/audit timestamp. |
+| `passwordChangedAt` | Timestamp of the latest password change. |
 | `lastLoginAt` | Last successful login. |
 | `failedLoginAttempts` | Current failure count. |
 | `lockedUntil` | Temporary lock expiration. |
@@ -51,7 +51,7 @@ The public registration flow always creates `USER`. An existing administrator mu
 
 Username is intentionally not changed by this operation because it is a login identifier and is also included in JWT claims. Password changes use the dedicated secured password endpoint.
 
-The service normalizes email to lowercase, checks uniqueness, updates the managed entity inside a transaction, and writes a `PROFILE_UPDATED` audit event.
+The service normalizes email to lowercase, checks uniqueness, and updates the managed entity inside a transaction.
 
 ## 6. Safe response DTO
 

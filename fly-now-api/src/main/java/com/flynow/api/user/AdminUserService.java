@@ -1,6 +1,5 @@
 package com.flynow.api.user;
 
-import com.flynow.api.auth.audit.AuthAuditService;
 import com.flynow.api.entities.AccountStatus;
 import com.flynow.api.entities.UserAccount;
 import com.flynow.api.entities.UserRole;
@@ -20,8 +19,6 @@ public class AdminUserService {
 
     private final UserAccountRepository userRepository;
     private final RefreshSessionService sessionService;
-    private final AuthAuditService auditService;
-
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> list(Pageable pageable) {
         return PageResponse.from(userRepository.findAll(pageable).map(UserResponse::from));
@@ -35,8 +32,6 @@ public class AdminUserService {
         UserAccount user = requireUser(userId);
         user.adminSetStatus(status);
         sessionService.revokeAll(userId, "ADMIN_STATUS_CHANGE");
-        auditService.record(user, "ADMIN_STATUS_CHANGED", true, null, null,
-                "actor=" + actorId + ",status=" + status);
         return UserResponse.from(user);
     }
 
@@ -48,8 +43,6 @@ public class AdminUserService {
         UserAccount user = requireUser(userId);
         user.adminSetRole(role);
         sessionService.revokeAll(userId, "ADMIN_ROLE_CHANGE");
-        auditService.record(user, "ADMIN_ROLE_CHANGED", true, null, null,
-                "actor=" + actorId + ",role=" + role);
         return UserResponse.from(user);
     }
 

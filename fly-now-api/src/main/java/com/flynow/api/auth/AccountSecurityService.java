@@ -1,6 +1,5 @@
 package com.flynow.api.auth;
 
-import com.flynow.api.auth.audit.AuthAuditService;
 import com.flynow.api.entities.AccountStatus;
 import com.flynow.api.entities.UserAccount;
 import com.flynow.api.user.UserAccountRepository;
@@ -19,10 +18,8 @@ public class AccountSecurityService {
 
     private final UserAccountRepository userRepository;
     private final AuthProperties properties;
-    private final AuthAuditService auditService;
-
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordLoginFailure(String username, String ipAddress, String userAgent) {
+    public void recordLoginFailure(String username) {
         UserAccount user = userRepository.findByUsername(normalize(username)).orElse(null);
         if (user != null && user.getStatus() != AccountStatus.DISABLED) {
             user.unlockIfExpired(Instant.now());
@@ -33,7 +30,6 @@ public class AccountSecurityService {
                 );
             }
         }
-        auditService.record(user, "LOGIN_FAILED", false, ipAddress, userAgent, "Invalid credentials or account state");
     }
 
     private String normalize(String value) {

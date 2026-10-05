@@ -124,7 +124,7 @@ flowchart LR
 
 ### Spring Boot owns
 
-- `users`, roles, account statuses, and authentication audit records.
+- `users`, roles, and account statuses.
 - Refresh sessions and password-reset tokens.
 - Applications and user ownership.
 - Source metadata and configuration.
@@ -272,7 +272,6 @@ service layer, not only in React or the controller.
   exposed publicly.
 - Strict upload limits, archive validation, dependency/image scanning, and safe
   log redaction.
-- Audit important account, administration, secret, and deployment actions.
 
 Running untrusted customer code through the Docker daemon is a major security
 boundary. A production multi-tenant offering needs stronger isolation than a
@@ -382,5 +381,4 @@ host and obtain a working URL.
   most one active deployment result.
 - Failure is visible and retryable without corrupting state.
 - A successful deployment receives a routed HTTPS URL.
-- Logs and audit data contain no credentials or environment secrets.
-
+- Logs contain no credentials or environment secrets.

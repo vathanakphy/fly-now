@@ -24,7 +24,17 @@ Binds and validates `app.auth.*`. Typed properties prevent configuration string 
 
 ### `auth/AccountSecurityService.java`
 
-Records failed logins and performs temporary account lockout. `REQUIRES_NEW` ensures failure state/audit can commit separately from a failed login transaction.
+Records failed logins and performs temporary account lockout. `REQUIRES_NEW` ensures failure state can commit separately from a failed login transaction.
+
+## Auth authorization
+
+### `auth/authorization/AuthenticatedUserIdResolver.java`
+
+Resolves the stable database user ID from the signed JWT subject. It denies unsupported or malformed authentication instead of falling back to the mutable username.
+
+### `auth/authorization/OwnershipAuthorization.java`
+
+Provides reusable owner-only and owner-or-administrator decisions for Spring Security `@PreAuthorize` expressions. Its owner ID must come from persisted data, never from the client.
 
 ## Auth DTOs
 
@@ -120,23 +130,17 @@ Generates cryptographically secure random tokens, hashes them with SHA-256, seri
 
 ## Mail
 
-### `auth/mail/AuthMailService.java`
+### `auth/mail/EmailService.java`
 
-Builds and sends password-reset emails through `JavaMailSender`. It returns without sending when mail is disabled. SMTP credentials remain configuration, not source code.
+Defines the password-reset email contract used by the authentication service.
 
-## Audit
+### `auth/mail/MockEmailService.java`
 
-### `entities/AuthAuditEvent.java`
+The default local implementation. It writes the recipient, reset token, and reset URL to the application log.
 
-JPA entity for security event history: event type, success, optional user, network/client context, detail, and timestamp.
+### `auth/mail/SmtpEmailService.java`
 
-### `auth/audit/AuthAuditEventRepository.java`
-
-Standard Spring Data repository for storing/querying audit events.
-
-### `auth/audit/AuthAuditService.java`
-
-Creates audit rows and truncates untrusted strings to database limits before persistence.
+Builds and sends password-reset emails through `JavaMailSender` when `app.auth.mail-enabled=true`. SMTP credentials remain configuration, not source code.
 
 ## Centralized user persistence model
 
@@ -164,7 +168,7 @@ Defines authenticated `/api/users/me` GET/PUT routes. It takes identity from JWT
 
 ### `user/UserService.java`
 
-Loads the current profile and updates name/email with normalization, uniqueness protection, transaction handling, and audit logging.
+Loads the current profile and updates name/email with normalization, uniqueness protection, and transaction handling.
 
 ### `user/AdminUserController.java`
 
@@ -172,7 +176,7 @@ Defines `/api/admin/users/**`. Class-level method security requires `ADMIN`. It 
 
 ### `user/AdminUserService.java`
 
-Applies administrator safety rules, updates users, revokes their sessions, invalidates JWTs through entity state changes, and records audit events.
+Applies administrator safety rules, updates users, revokes their sessions, and invalidates JWTs through entity state changes.
 
 ## User DTOs
 

@@ -60,10 +60,9 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "Register a user account")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(
-            @Valid @RequestBody RegisterRequest request,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody RegisterRequest request
     ) {
-        RegisterResponse response = authService.register(request, context(servletRequest));
+        RegisterResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("User registered successfully", response));
     }
@@ -89,10 +88,9 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(summary = "Revoke the current refresh session")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
-            HttpServletRequest servletRequest
+            @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken
     ) {
-        authService.logout(refreshToken, context(servletRequest));
+        authService.logout(refreshToken);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
                 .body(ApiResponse.success("Logged out successfully", null));
@@ -101,10 +99,9 @@ public class AuthController {
     @PostMapping("/logout-all")
     @Operation(summary = "Revoke every session", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<ApiResponse<Void>> logoutAll(
-            @AuthenticationPrincipal Jwt jwt,
-            HttpServletRequest servletRequest
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        authService.logoutAll(userId(jwt), context(servletRequest));
+        authService.logoutAll(userId(jwt));
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
                 .body(ApiResponse.success("All sessions were revoked", null));
@@ -120,10 +117,9 @@ public class AuthController {
     @PostMapping("/reset-password")
     @Operation(summary = "Reset a password using a single-use token")
     public ApiResponse<Void> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody ResetPasswordRequest request
     ) {
-        authService.resetPassword(request, context(servletRequest));
+        authService.resetPassword(request);
         return ApiResponse.success("Password reset successfully", null);
     }
 
@@ -131,10 +127,9 @@ public class AuthController {
     @Operation(summary = "Change the authenticated user's password", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody ChangePasswordRequest request,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody ChangePasswordRequest request
     ) {
-        authService.changePassword(userId(jwt), request, context(servletRequest));
+        authService.changePassword(userId(jwt), request);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
                 .body(ApiResponse.success("Password changed; sign in again", null));

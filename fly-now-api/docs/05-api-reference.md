@@ -45,7 +45,7 @@ Errors use:
 | GET | `/api/auth/sessions` | Yes | List the caller's refresh sessions. |
 | DELETE | `/api/auth/sessions/{sessionId}` | Yes | Revoke one session owned by caller. |
 
-All state-changing requests require a valid CSRF token/cookie pair.
+Registration, login, forgot-password, and reset-password do not require authentication or a CSRF token. Cookie-backed refresh and logout requests require a valid CSRF token/cookie pair.
 
 ### Register body
 

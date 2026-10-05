@@ -14,6 +14,7 @@ This directory explains the current Spring Boot application as it exists in the 
 8. [Product and infrastructure PRD](08-product-and-infrastructure-prd.md) — product scope, React/Spring/Go boundaries, data stores, system flows, security, and delivery phases.
 9. [Stage 1 database design](09-stage-1-database-design.md) — table relationships, ownership, source versioning, runtime configuration, secrets, readiness, and deletion decisions.
 10. [Stage 1 PostgreSQL schema](sql/stage-1-schema.sql) — executable database definition derived from the Stage 1 task tracker.
+11. [Ownership authorization](10-ownership-authorization.md) — reusable JWT-subject ownership checks and the required application-module integration pattern.
 
 ## Current scope
 
@@ -28,7 +29,7 @@ Implemented:
 - User profile read/update
 - User and administrator roles
 - Administrator user status/role management
-- Audit records, validation, consistent responses, Swagger, Actuator, CORS, and CSRF
+- Validation, consistent responses, Swagger, Actuator, CORS, and CSRF
 
 Intentionally not implemented:
 

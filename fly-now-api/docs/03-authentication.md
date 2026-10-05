@@ -14,7 +14,7 @@ normalize username/email
 check password safety (when enabled)
     ↓ encode password
 insert ACTIVE user with USER role
-    ↓ write REGISTERED audit event
+    ↓
 return safe RegisterResponse
 ```
 
@@ -109,7 +109,7 @@ The service locks and loads the token row, checks its type, expiry, unused state
 
 ## 8. CSRF
 
-The API uses bearer tokens for protected resources but also uses a refresh-token cookie. Cookie-authenticated actions need CSRF protection, so Spring Security stores a CSRF token in the `XSRF-TOKEN` cookie.
+The API uses bearer tokens for protected resources but also uses a refresh-token cookie. Cookie-authenticated actions need CSRF protection, so Spring Security stores a CSRF token in the `XSRF-TOKEN` cookie. Registration, login, forgot-password, and reset-password do not use cookie authentication and are excluded from CSRF checks.
 
 Client flow:
 

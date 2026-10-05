@@ -91,7 +91,8 @@ Blank RSA keys generate an ephemeral key pair at startup. That is convenient loc
 - `max-failed-logins` controls the lockout threshold.
 - `lock-minutes` controls temporary lock duration.
 - `refresh-cookie-secure` must be `true` when production uses HTTPS.
-- `mail-enabled` controls whether reset emails are sent.
+- `mail-enabled=false` (the default) logs password-reset messages through the mock email service.
+- `mail-enabled=true` sends password-reset messages through SMTP.
 - `compromised-password-check-enabled` enables Spring Security's breached-password check.
 
 ### Web
@@ -136,6 +137,9 @@ java -jar target/fly-now-api.jar --spring.profiles.active=local
 
 ## 9. SMTP and password reset
 
-Forgot/reset-password code exists, but a user can receive the reset link only when SMTP is configured and `app.auth.mail-enabled=true`.
+Forgot/reset-password code uses an `EmailService` interface with two implementations:
 
-For local development, Mailpit or MailHog can listen on port 1025. When mail is disabled, the forgot-password endpoint still returns a generic success response to avoid revealing whether an email exists, but no message is delivered.
+- `MockEmailService` is selected by default and logs the recipient, reset token, and reset URL to the running application's console.
+- `SmtpEmailService` is selected when SMTP is configured and `app.auth.mail-enabled=true`.
+
+For local development, use the default mock to copy the reset URL from the application log. To test real SMTP delivery, Mailpit or MailHog can listen on port 1025. The forgot-password endpoint always returns a generic success response to avoid revealing whether an email exists.

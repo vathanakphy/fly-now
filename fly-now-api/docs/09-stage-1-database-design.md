@@ -13,7 +13,6 @@ The complete PostgreSQL definition is available in
 User
 ├── Auth sessions
 ├── Auth tokens
-├── Auth audit events
 └── Applications
     ├── Source configuration
     │   ├── Source versions
@@ -22,13 +21,12 @@ User
     └── Environment variables
 ```
 
-The schema contains ten tables:
+The schema contains nine tables:
 
 | Parent | Child | Cardinality | Foreign key |
 |---|---|---:|---|
 | `users` | `auth_sessions` | One-to-many | `auth_sessions.user_id` |
 | `users` | `auth_tokens` | One-to-many | `auth_tokens.user_id` |
-| `users` | `auth_audit_events` | One-to-many | `auth_audit_events.user_id` |
 | `users` | `applications` | One-to-many | `applications.owner_id` |
 | `applications` | `application_sources` | One-to-one | `application_sources.application_id` |
 | `application_sources` | `source_versions` | One-to-many | `source_versions.source_id` |
@@ -66,15 +64,6 @@ service invalidates older active tokens when it issues a replacement.
 
 Only the hash is stored; the raw token is sent to the user and cannot be
 reconstructed from the database.
-
-### `auth_audit_events`
-
-This table records security events such as registration, successful or failed
-login, logout, password changes, and administrator actions.
-
-`user_id` is nullable because FlyNow may not know which account caused a failed
-authentication attempt. Audit history remains if a user is removed because the
-foreign key uses `ON DELETE SET NULL`.
 
 ## 3. Application ownership
 
@@ -175,7 +164,7 @@ The table records event type, repository, branch, commit, processing status,
 and limited diagnostic information. It deliberately does not retain the full
 webhook payload.
 
-The source reference uses `ON DELETE SET NULL`, preserving the processing audit
+The source reference uses `ON DELETE SET NULL`, preserving the processing history
 after a source configuration is removed.
 
 ## 7. Desired runtime configuration
@@ -249,7 +238,6 @@ become inconsistent with the source or configuration tables.
 | Parent deletion | Child behavior | Reason |
 |---|---|---|
 | User | Sessions and action tokens cascade | Credentials must not survive the account. |
-| User | Audit user reference becomes null | Security history should remain. |
 | User | Owned applications are restricted | Applications require an explicit cleanup/transfer decision. |
 | Application hard delete | Source, runtime configuration, and environment variables cascade | They cannot exist without an application. |
 | Source hard delete | Source-version metadata cascades | Versions belong only to that source. |
@@ -272,4 +260,3 @@ They do not support actual execution. Stage 2 will introduce deployment and
 runtime records such as `deployments`, `deployment_events`, `outbox_events`,
 `runtime_instances`, and `application_routes`, together with RabbitMQ, the Go
 worker, Docker, and Traefik.
-
