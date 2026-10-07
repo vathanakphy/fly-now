@@ -1,71 +1,73 @@
 package com.flynow.api.shared.exception;
 
+import com.flynow.api.shared.web.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
-        return error(HttpStatus.BAD_REQUEST, "Validation failed", errors);
+        return ResponseEntity.badRequest().body(ApiResponse.validationError("Validation failed", errors));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException exception) {
-        return error(HttpStatus.NOT_FOUND, exception.getMessage(), null);
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException exception) {
+        return error(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage());
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException exception) {
-        return error(HttpStatus.BAD_REQUEST, exception.getMessage(), null);
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(BadRequestException exception) {
+        return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", exception.getMessage());
     }
 
     @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(ConflictException exception) {
-        return error(HttpStatus.CONFLICT, exception.getMessage(), null);
+    public ResponseEntity<ApiResponse<Void>> handleConflict(ConflictException exception) {
+        return error(HttpStatus.CONFLICT, "CONFLICT", exception.getMessage());
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException exception) {
-        return error(HttpStatus.FORBIDDEN, exception.getMessage(), null);
+    public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException exception) {
+        return error(HttpStatus.FORBIDDEN, "FORBIDDEN", exception.getMessage());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException exception) {
-        return error(HttpStatus.UNAUTHORIZED, "Invalid username or password", null);
+    public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException exception) {
+        return error(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid username or password");
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException exception) {
+        return error(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Authentication is required");
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception) {
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", null);
+    public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception exception) {
+        log.error("Unhandled controller exception", exception);
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "An unexpected error occurred");
     }
 
-    private ResponseEntity<ErrorResponse> error(
+    private ResponseEntity<ApiResponse<Void>> error(
             HttpStatus status,
-            String message,
-            Map<String, String> validationErrors
+            String code,
+            String message
     ) {
-        ErrorResponse body = new ErrorResponse(
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                validationErrors,
-                Instant.now()
-        );
-        return ResponseEntity.status(status).body(body);
+        return ResponseEntity.status(status).body(ApiResponse.error(code, message));
     }
 }

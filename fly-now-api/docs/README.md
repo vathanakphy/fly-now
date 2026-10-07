@@ -15,6 +15,7 @@ This directory explains the current Spring Boot application as it exists in the 
 9. [Stage 1 database design](09-stage-1-database-design.md) — table relationships, ownership, source versioning, runtime configuration, secrets, readiness, and deletion decisions.
 10. [Stage 1 PostgreSQL schema](sql/stage-1-schema.sql) — executable database definition derived from the Stage 1 task tracker.
 11. [Ownership authorization](10-ownership-authorization.md) — reusable JWT-subject ownership checks and the required application-module integration pattern.
+12. [API refactoring summary](11-refactoring-summary.md) — thin controllers, extracted DTOs, route constants, unified errors, logging, production configuration, and verification results.
 
 ## Current scope
 
@@ -30,6 +31,7 @@ Implemented:
 - User and administrator roles
 - Administrator user status/role management
 - Validation, consistent responses, Swagger, Actuator, CORS, and CSRF
+- Focused unit tests for response envelopes, cookies, authenticated identity, mapping, mail, exception handling, and production configuration
 
 Intentionally not implemented:
 
@@ -38,7 +40,7 @@ Intentionally not implemented:
 - Email ownership verification
 - Flyway migrations
 - Rate limiting
-- Automated tests
+- Comprehensive controller, security, repository, and integration tests
 - Project/source/deployment features from later phases of the development plan
 
 The application currently uses Hibernate schema synchronization (`ddl-auto=update`) for development. This is convenient during early development but is not the final production database strategy.

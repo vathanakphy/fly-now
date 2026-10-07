@@ -19,15 +19,17 @@ Errors use:
 
 ```json
 {
-  "status": 400,
-  "error": "Bad Request",
+  "success": false,
+  "code": "VALIDATION_ERROR",
   "message": "Validation failed",
-  "validationErrors": {
+  "fieldErrors": {
     "email": "Email must be valid"
   },
   "timestamp": "2026-09-29T10:00:00Z"
 }
 ```
+
+Error codes are stable client-facing identifiers: `VALIDATION_ERROR`, `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, and `INTERNAL_ERROR`. The HTTP status remains authoritative and is not duplicated in the JSON body.
 
 ## 2. Authentication endpoints
 

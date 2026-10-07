@@ -24,8 +24,10 @@ This component reads the signed JWT `sub` claim and converts it to the database
 user ID. It deliberately does not use `Authentication.getName()` because
 FlyNow configures the authentication name as the mutable username.
 
-An absent, unauthenticated, unsupported, blank, or malformed principal produces
-an empty result. Authorization therefore denies access instead of guessing.
+The `resolve` method returns an empty result for an absent, unauthenticated,
+unsupported, blank, or malformed principal. Authorization therefore denies
+access instead of guessing. Controllers use `require`, which returns the same
+trusted ID or raises an authentication failure that becomes HTTP 401.
 
 ### `OwnershipAuthorization`
 
@@ -139,4 +141,3 @@ WHERE id = :application_id
 
 This prevents accidental cross-user access and avoids loading a resource the
 caller does not own.
-

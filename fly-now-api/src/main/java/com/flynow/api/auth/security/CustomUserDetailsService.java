@@ -2,7 +2,7 @@ package com.flynow.api.auth.security;
 
 import com.flynow.api.entities.AccountStatus;
 import com.flynow.api.entities.UserAccount;
-import com.flynow.api.user.UserAccountRepository;
+import com.flynow.api.user.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;

@@ -1,5 +1,6 @@
 package com.flynow.api.auth.security;
 
+import com.flynow.api.auth.web.AuthApiPaths;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,10 +49,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfRepository)
                         .ignoringRequestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/forgot-password",
-                                "/api/auth/reset-password"
+                                AuthApiPaths.REGISTER_FULL,
+                                AuthApiPaths.LOGIN_FULL,
+                                AuthApiPaths.FORGOT_PASSWORD_FULL,
+                                AuthApiPaths.RESET_PASSWORD_FULL
                         )
                 )
                 .cors(Customizer.withDefaults())
@@ -60,7 +61,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout.disable())
-                .passwordManagement(password -> password.changePasswordPage("/api/auth/change-password"))
+                .passwordManagement(password -> password.changePasswordPage(AuthApiPaths.CHANGE_PASSWORD_FULL))
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
                                 "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
@@ -74,13 +75,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/refresh",
-                                "/api/auth/logout",
-                                "/api/auth/forgot-password",
-                                "/api/auth/reset-password",
-                                "/api/auth/csrf",
+                                AuthApiPaths.REGISTER_FULL,
+                                AuthApiPaths.LOGIN_FULL,
+                                AuthApiPaths.REFRESH_FULL,
+                                AuthApiPaths.LOGOUT_FULL,
+                                AuthApiPaths.FORGOT_PASSWORD_FULL,
+                                AuthApiPaths.RESET_PASSWORD_FULL,
+                                AuthApiPaths.CSRF_FULL,
                                 "/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

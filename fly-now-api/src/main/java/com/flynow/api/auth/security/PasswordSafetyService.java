@@ -1,6 +1,6 @@
 package com.flynow.api.auth.security;
 
-import com.flynow.api.auth.AuthProperties;
+import com.flynow.api.auth.config.AuthProperties;
 import com.flynow.api.shared.exception.BadRequestException;
 import org.springframework.security.authentication.password.CompromisedPasswordDecision;
 import org.springframework.security.web.authentication.password.HaveIBeenPwnedRestApiPasswordChecker;

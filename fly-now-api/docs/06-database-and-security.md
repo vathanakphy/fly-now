@@ -67,20 +67,20 @@ Tradeoff: every authenticated request performs a database lookup. This favors im
 
 ## 9. Error information
 
-Login and forgot-password flows avoid account enumeration. Security failures use standard JSON without stack traces. Internal exceptions are converted to a generic 500 response.
+Login and forgot-password flows avoid account enumeration. Security and controller failures use the same `ApiResponse` envelope without stack traces. Internal exceptions are logged and converted to a generic `INTERNAL_ERROR` response.
 
-The logging aspect logs service name, duration, and success/failure, but not method arguments. This avoids accidentally logging passwords and tokens.
+The logging aspect logs service name, duration, and success/failure, but not method arguments or results. Normal completions use DEBUG, calls above the configured threshold use WARN, and failures use ERROR. This avoids accidentally logging passwords and tokens.
 
 ## 10. Production gaps
 
 Before production:
 
 - replace Hibernate `update` with reviewed migrations;
-- use persistent RSA keys from a secret manager;
-- enable HTTPS and secure cookies;
-- configure and secure SMTP;
+- supply the required persistent RSA keys through a secret manager;
+- deploy behind HTTPS; the `prod` profile already forces secure cookies;
+- supply the SMTP settings required by the `prod` profile;
 - add rate limiting for register/login/forgot/reset/refresh;
-- add authentication and authorization tests;
+- expand the focused unit tests into controller, authentication, authorization, repository, and integration coverage;
 - add cleanup jobs for expired sessions and tokens;
 - configure trusted proxy headers before using client IP for security decisions;
 - define backup, recovery, monitoring, and key-rotation procedures;

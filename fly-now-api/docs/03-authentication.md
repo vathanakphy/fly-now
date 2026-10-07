@@ -85,7 +85,7 @@ If an already revoked token is submitted again, the code treats it as possible t
 
 - `POST /api/auth/logout` hashes the refresh cookie, revokes that session, and clears the cookie. It does not require a valid access token, so logout still works after access-token expiry.
 - `POST /api/auth/logout-all` requires a JWT, revokes every refresh session, increments `token_version`, and clears the cookie. The increment immediately invalidates all access JWTs.
-- `DELETE /api/auth/sessions/{id}` can revoke only a session belonging to the authenticated user.
+- `DELETE /api/auth/sessions/{sessionId}` can revoke only a session belonging to the authenticated user.
 
 ## 7. Password change and recovery
 

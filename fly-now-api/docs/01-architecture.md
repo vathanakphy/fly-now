@@ -16,7 +16,7 @@ Spring Data repository
 PostgreSQL
 ```
 
-The response travels back through the same layers. Controllers return DTOs wrapped in `ApiResponse`; entities are not returned directly.
+The response travels back through the same layers. Controllers return DTOs wrapped in `ApiResponse`; entities are not returned directly. Errors use the same envelope with a stable code and optional field errors.
 
 ## 2. Package structure
 
@@ -24,29 +24,43 @@ The response travels back through the same layers. Controllers return DTOs wrapp
 com.flynow.api
 ├── FlyNowApiApplication.java
 ├── auth
-│   ├── authorization
+│   ├── config
+│   ├── controller
 │   ├── dto
-│   ├── mail
+│   │   ├── request
+│   │   └── response
+│   ├── repository
 │   ├── security
+│   ├── service
+│   │   └── model
 │   ├── session
-│   └── token
+│   └── web
 ├── entities
 ├── user
-│   └── dto
+│   ├── authorization
+│   ├── controller
+│   ├── dto
+│   │   ├── request
+│   │   └── response
+│   ├── mapper
+│   ├── repository
+│   ├── service
+│   └── web
 └── shared
     ├── aspect
     ├── config
     ├── exception
+    ├── mail
     └── web
 ```
 
 ### `auth`
 
-Owns authentication: credentials, login, JWT creation/validation, refresh sessions, password reset tokens, and security configuration.
+Owns authentication: credentials, login, JWT creation/validation, refresh sessions, password reset tokens, and security configuration. Its subpackages separate HTTP handling, DTOs, services, repositories, security, configuration, session models, and web helpers.
 
 ### `user`
 
-Owns user use cases: the user repository, profiles, self-service profile endpoints, and administrator user management.
+Owns user use cases: the user repository, profiles, self-service profile endpoints, and administrator user management. Its subpackages separate controllers, DTOs, services, persistence, mapping, authorization, and route constants.
 
 ### `entities`
 
@@ -54,7 +68,7 @@ Centralizes JPA persistence models and their enums. It currently contains `UserA
 
 ### `shared`
 
-Contains application-wide infrastructure used by more than one feature: response envelopes, error handling, CORS/OpenAPI configuration, pagination response structure, and service logging.
+Contains application-wide infrastructure used by more than one feature: response envelopes, error handling, CORS/OpenAPI configuration, mail delivery, pagination response structure, and service logging.
 
 ## 3. Layer responsibilities
 

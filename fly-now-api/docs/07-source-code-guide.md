@@ -8,63 +8,91 @@ This is a file-by-file map of the current Java code. Use it when navigating the 
 
 Contains `main`. `@SpringBootApplication` enables auto-configuration and scans `com.flynow.api` and every child package for controllers, services, repositories, entities, and configuration.
 
-## Auth root
+## Auth HTTP layer
 
-### `auth/AuthController.java`
+### `auth/controller/AuthController.java`
 
-Defines `/api/auth/**`. It validates HTTP bodies, reads JWT/cookies, creates/clears the refresh cookie, captures IP/user-agent context, and delegates business behavior to `AuthService`. Its nested `CsrfResponse` describes the CSRF header, parameter, and token.
+Defines `/api/auth/**`. It validates HTTP bodies, reads authentication/cookies, captures IP/user-agent context, and delegates business behavior to `AuthService`.
 
-### `auth/AuthService.java`
+### `auth/web/AuthApiPaths.java`
+
+Defines feature-scoped authentication route constants shared by the controller, security configuration, and cookie policy.
+
+### `auth/web/RefreshCookieFactory.java`
+
+Creates and clears the secure, HttpOnly refresh cookie using the configured security policy.
+
+## Auth application layer
+
+### `auth/service/AuthService.java`
 
 Coordinates registration, login, refresh, logout, password recovery/change, and session management. It is the main authentication use-case layer. It deliberately returns DTOs/session results instead of entities.
 
-### `auth/AuthProperties.java`
+### `auth/service/RefreshSessionService.java`
+
+Issues and rotates refresh sessions, detects reuse, revokes tokens/families, lists user sessions, and creates new access JWTs. Public session data uses `SessionResponse`.
+
+### `auth/service/SecureTokenService.java`
+
+Generates cryptographically secure random tokens, hashes them with SHA-256, serializes/parses UUID + secret, compares hashes in constant time, and consumes tokens once.
+
+### `auth/service/model/AuthenticationResult.java`
+
+Carries login response and refresh-cookie material from the service to the controller without exposing session-service implementation types.
+
+### `auth/config/AuthProperties.java`
 
 Binds and validates `app.auth.*`. Typed properties prevent configuration string lookups from being scattered throughout services.
 
-### `auth/AccountSecurityService.java`
+### `user/service/AccountSecurityService.java`
 
 Records failed logins and performs temporary account lockout. `REQUIRES_NEW` ensures failure state can commit separately from a failed login transaction.
 
-## Auth authorization
-
-### `auth/authorization/AuthenticatedUserIdResolver.java`
+### `auth/security/AuthenticatedUserIdResolver.java`
 
 Resolves the stable database user ID from the signed JWT subject. It denies unsupported or malformed authentication instead of falling back to the mutable username.
 
-### `auth/authorization/OwnershipAuthorization.java`
+### `user/authorization/OwnershipAuthorization.java`
 
 Provides reusable owner-only and owner-or-administrator decisions for Spring Security `@PreAuthorize` expressions. Its owner ID must come from persisted data, never from the client.
 
 ## Auth DTOs
 
-### `auth/dto/RegisterRequest.java`
+### `auth/dto/request/RegisterRequest.java`
 
 Defines registration JSON and validation: name, email, username, and a 12–72 character password.
 
-### `auth/dto/RegisterResponse.java`
+### `auth/dto/response/RegisterResponse.java`
 
 Returns the safe identity fields after registration. It excludes password and internal security state.
 
-### `auth/dto/LoginRequest.java`
+### `auth/dto/request/LoginRequest.java`
 
 Accepts nonblank username and password.
 
-### `auth/dto/LoginResponse.java`
+### `auth/dto/response/LoginResponse.java`
 
 Returns access token, `Bearer` token type, and lifetime in seconds. The refresh token is intentionally not included because it is sent as an HttpOnly cookie.
 
-### `auth/dto/EmailRequest.java`
+### `auth/dto/request/EmailRequest.java`
 
 Reusable validated email body for forgot-password.
 
-### `auth/dto/ResetPasswordRequest.java`
+### `auth/dto/request/ResetPasswordRequest.java`
 
 Accepts the serialized one-time reset token and validated new password.
 
-### `auth/dto/ChangePasswordRequest.java`
+### `auth/dto/request/ChangePasswordRequest.java`
 
 Accepts current and new passwords for an authenticated change.
+
+### `auth/dto/response/CsrfResponse.java`
+
+Returns the CSRF header name, parameter name, and token.
+
+### `auth/dto/response/SessionResponse.java`
+
+Returns safe refresh-session metadata without exposing token hashes or raw tokens.
 
 ## Auth security
 
@@ -94,7 +122,7 @@ Optionally calls Spring Security's Have I Been Pwned checker and rejects known c
 
 ### `auth/security/RestSecurityErrorHandler.java`
 
-Converts filter-chain authentication failures to 401 and authorization failures to 403 using the same `ErrorResponse` JSON structure as controller exceptions.
+Converts filter-chain authentication failures to 401 and authorization failures to 403 using the same `ApiResponse` envelope as controller exceptions.
 
 ## Refresh sessions
 
@@ -102,13 +130,17 @@ Converts filter-chain authentication failures to 401 and authorization failures 
 
 JPA entity for `auth_sessions`. It stores only the refresh-token hash and tracks family, expiry, rotation, revocation, IP, and user agent. `rotate` and `revoke` are controlled state transitions.
 
-### `auth/session/AuthSessionRepository.java`
+### `auth/repository/AuthSessionRepository.java`
 
 Database access for sessions. It includes ownership queries, bulk user/family revocation, and a pessimistically locked token-hash lookup.
 
-### `auth/session/RefreshSessionService.java`
+### `auth/session/ClientContext.java`
 
-Issues and rotates refresh sessions, detects reuse, revokes tokens/families, lists user sessions, and creates new access JWTs. Nested records represent request context, internally issued credentials, and safe session views.
+Carries bounded client IP and user-agent metadata from the HTTP layer into session issuance.
+
+### `auth/session/IssuedSession.java`
+
+Carries internally issued access/refresh credentials and expiration metadata between authentication services.
 
 ## Single-use auth tokens
 
@@ -120,25 +152,21 @@ JPA entity for one-time tokens. It knows whether it is unused/unexpired and can 
 
 Currently contains only `PASSWORD_RESET`. An enum prevents arbitrary token-purpose strings in Java.
 
-### `auth/token/AuthTokenRepository.java`
+### `auth/repository/AuthTokenRepository.java`
 
 Loads tokens with a pessimistic lock and invalidates older unused tokens of the same user/type.
 
-### `auth/token/SecureTokenService.java`
-
-Generates cryptographically secure random tokens, hashes them with SHA-256, serializes/parses UUID + secret, compares hashes in constant time, and consumes tokens once.
-
 ## Mail
 
-### `auth/mail/EmailService.java`
+### `shared/mail/EmailService.java`
 
 Defines the password-reset email contract used by the authentication service.
 
-### `auth/mail/MockEmailService.java`
+### `shared/mail/MockEmailService.java`
 
 The default local implementation. It writes the recipient, reset token, and reset URL to the application log.
 
-### `auth/mail/SmtpEmailService.java`
+### `shared/mail/SmtpEmailService.java`
 
 Builds and sends password-reset emails through `JavaMailSender` when `app.auth.mail-enabled=true`. SMTP credentials remain configuration, not source code.
 
@@ -158,41 +186,49 @@ Defines `ACTIVE`, `LOCKED`, and `DISABLED` account states.
 
 ## User domain
 
-### `user/UserAccountRepository.java`
+### `user/repository/UserAccountRepository.java`
 
 Provides user lookup and uniqueness checks by username/email plus standard CRUD/pagination.
 
-### `user/UserController.java`
+### `user/controller/UserController.java`
 
 Defines authenticated `/api/users/me` GET/PUT routes. It takes identity from JWT subject rather than accepting a user ID from the client.
 
-### `user/UserService.java`
+### `user/web/UserApiPaths.java` and `user/web/AdminUserApiPaths.java`
+
+Define feature-scoped user and administrator route constants without creating a global route constants class.
+
+### `user/mapper/UserMapper.java`
+
+Maps the centralized `UserAccount` persistence entity to the public `UserResponse` DTO.
+
+### `user/service/UserService.java`
 
 Loads the current profile and updates name/email with normalization, uniqueness protection, and transaction handling.
 
-### `user/AdminUserController.java`
+### `user/controller/AdminUserController.java`
 
 Defines `/api/admin/users/**`. Class-level method security requires `ADMIN`. It supports paginated listing and role/status updates.
 
-### `user/AdminUserService.java`
+### `user/service/AdminUserService.java`
 
 Applies administrator safety rules, updates users, revokes their sessions, and invalidates JWTs through entity state changes.
 
 ## User DTOs
 
-### `user/dto/UserResponse.java`
+### `user/dto/response/UserResponse.java`
 
-Maps `UserAccount` to the safe public profile representation.
+Defines the safe public profile representation without importing the persistence entity.
 
-### `user/dto/UpdateProfileRequest.java`
+### `user/dto/request/UpdateProfileRequest.java`
 
 Validates profile name and email updates.
 
-### `user/dto/UserRoleRequest.java`
+### `user/dto/request/UserRoleRequest.java`
 
 Requires a non-null `UserRole` for admin role changes.
 
-### `user/dto/AccountStatusRequest.java`
+### `user/dto/request/AccountStatusRequest.java`
 
 Requires a non-null `AccountStatus` for admin status changes.
 
@@ -200,7 +236,11 @@ Requires a non-null `AccountStatus` for admin status changes.
 
 ### `shared/config/AppProperties.java`
 
-Binds shared `app.cors` and `app.pagination` settings. Nested classes keep related values grouped.
+Binds shared `app.cors`, `app.pagination`, and `app.logging` settings. Nested classes keep related values grouped.
+
+### `shared/config/ProductionConfigurationValidator.java`
+
+Rejects insecure production startup when refresh cookies, mail delivery, JWT keys, or CORS origins are unsafe or incomplete.
 
 ### `shared/config/WebConfig.java`
 
@@ -214,7 +254,7 @@ Sets Swagger title/tags and declares the reusable `bearerAuth` JWT security sche
 
 ### `shared/web/ApiResponse.java`
 
-Generic success envelope containing success flag, message, typed data, and timestamp.
+Generic success/error envelope containing success flag, stable error code, message, typed data, optional field errors, and timestamp.
 
 ### `shared/web/PageResponse.java`
 
@@ -238,16 +278,12 @@ Represents a known authenticated operation that is not allowed and maps to HTTP 
 
 Represents a missing requested resource and maps to HTTP 404.
 
-### `shared/exception/ErrorResponse.java`
-
-Defines standard error JSON: status, error, message, optional field validation errors, and timestamp.
-
 ### `shared/exception/GlobalExceptionHandler.java`
 
-Uses `@RestControllerAdvice` to translate validation and application exceptions to consistent HTTP responses. The final generic handler prevents stack traces from leaking to clients.
+Uses `@RestControllerAdvice` to translate validation and application exceptions to the shared `ApiResponse` envelope. The final generic handler logs internal failures and prevents stack traces from leaking to clients.
 
 ## Shared aspect
 
 ### `shared/aspect/ServiceLoggingAspect.java`
 
-Wraps every `@Service` method, measures duration, and logs completion/failure. It intentionally does not log arguments or returned tokens/passwords.
+Wraps every `@Service` method, measures duration, logs normal completion at DEBUG, warns about configured slow calls, and logs failures. It intentionally does not log arguments or returned tokens/passwords.

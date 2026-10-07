@@ -37,6 +37,8 @@ The `local` profile loads both files in this order:
 
 The local file currently contains direct development values and is ignored by Git. Update its PostgreSQL username and password to match your machine.
 
+The `prod` profile requires database credentials, persistent RSA keys, a non-local CORS origin, SMTP configuration, and secure refresh cookies. Startup fails when these security requirements are missing.
+
 Successful startup contains:
 
 ```text
@@ -63,7 +65,7 @@ This means: use environment variable `SERVER_PORT`; if it is absent, use `8080`.
 
 The local profile uses hardcoded development values. Profile-specific properties override base properties.
 
-Spring Boot does not automatically load a `.env` file. `.env.example` documents variables for a shell, IDE, Docker Compose, or deployment platform. You must export/load them using that tool.
+Spring Boot does not automatically load a `.env` file, and this module does not currently provide an `.env.example`. Supply variables through the shell, IDE, Docker Compose, container runtime, or deployment platform.
 
 ## 6. Configuration groups
 
@@ -101,7 +103,46 @@ Blank RSA keys generate an ephemeral key pair at startup. That is convenient loc
 - CORS credentials are enabled because refresh tokens use cookies.
 - Swagger and Actuator paths are configured separately.
 
-## 7. Debug modes
+### Logging
+
+- `app.logging.slow-threshold-ms` controls when a service call is warned as slow.
+- Normal service completions log at DEBUG, slow calls at WARN, and failures at ERROR.
+
+## 7. Production profile
+
+Start the packaged application with:
+
+```bash
+java -jar target/fly-now-api.jar --spring.profiles.active=prod
+```
+
+`application-prod.properties` requires these environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `DB_URL` | PostgreSQL JDBC URL |
+| `DB_USERNAME` | PostgreSQL user |
+| `DB_PASSWORD` | PostgreSQL password |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated HTTPS frontend origins |
+| `FRONTEND_URL` | Public frontend URL used in password-reset links |
+| `JWT_KEY_ID` | JWT signing key identifier |
+| `JWT_PRIVATE_KEY_BASE64` | PKCS#8 DER private key encoded as Base64 |
+| `JWT_PUBLIC_KEY_BASE64` | X.509 DER public key encoded as Base64 |
+| `MAIL_FROM` | Password-reset sender address |
+| `MAIL_HOST` | SMTP host |
+| `MAIL_USERNAME` | SMTP user |
+| `MAIL_PASSWORD` | SMTP password |
+
+`MAIL_PORT` is optional and defaults to `587`.
+
+The production profile forces secure refresh cookies, SMTP authentication,
+STARTTLS, and `spring.jpa.hibernate.ddl-auto=validate`. It validates the
+existing database schema but does not create or migrate it.
+
+`ProductionConfigurationValidator` also rejects missing JWT keys, mock mail,
+blank or local CORS origins, and non-HTTPS CORS origins.
+
+## 8. Debug modes
 
 `debug=true` in `application-local.properties` enables Spring Boot diagnostic logging. It does not enable IDE breakpoints.
 
@@ -115,7 +156,7 @@ mvn spring-boot:run \
 
 Attach the IDE debugger to `localhost:5005`.
 
-## 8. Build commands
+## 9. Build commands
 
 Compile and package without tests:
 
@@ -135,7 +176,7 @@ Run the packaged JAR:
 java -jar target/fly-now-api.jar --spring.profiles.active=local
 ```
 
-## 9. SMTP and password reset
+## 10. SMTP and password reset
 
 Forgot/reset-password code uses an `EmailService` interface with two implementations:
 
