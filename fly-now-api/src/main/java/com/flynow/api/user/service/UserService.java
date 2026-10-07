@@ -4,8 +4,6 @@ import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.exception.ConflictException;
 import com.flynow.api.shared.exception.ResourceNotFoundException;
 import com.flynow.api.user.dto.request.UpdateProfileRequest;
-import com.flynow.api.user.dto.response.UserResponse;
-import com.flynow.api.user.mapper.UserMapper;
 import com.flynow.api.user.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,15 +17,14 @@ import java.util.Locale;
 public class UserService {
 
     private final UserAccountRepository userRepository;
-    private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
-    public UserResponse me(Long userId) {
-        return userMapper.toResponse(requireUser(userId));
+    public UserAccount me(Long userId) {
+        return requireUser(userId);
     }
 
     @Transactional
-    public UserResponse updateProfile(
+    public UserAccount updateProfile(
             Long userId,
             UpdateProfileRequest request
     ) {
@@ -43,7 +40,7 @@ public class UserService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Email is already in use");
         }
-        return userMapper.toResponse(user);
+        return user;
     }
 
     private UserAccount requireUser(Long userId) {

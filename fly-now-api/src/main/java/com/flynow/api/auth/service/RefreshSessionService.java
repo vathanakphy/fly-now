@@ -1,9 +1,9 @@
 package com.flynow.api.auth.service;
 
 import com.flynow.api.auth.config.AuthProperties;
-import com.flynow.api.auth.dto.response.SessionResponse;
 import com.flynow.api.auth.repository.AuthSessionRepository;
 import com.flynow.api.auth.security.JwtTokenProvider;
+import com.flynow.api.auth.service.model.SessionDetails;
 import com.flynow.api.auth.session.ClientContext;
 import com.flynow.api.auth.session.IssuedSession;
 import com.flynow.api.entities.AccountStatus;
@@ -74,10 +74,10 @@ public class RefreshSessionService {
     }
 
     @Transactional(readOnly = true)
-    public List<SessionResponse> list(Long userId) {
+    public List<SessionDetails> list(Long userId) {
         Instant now = Instant.now();
         return repository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(session -> new SessionResponse(
+                .map(session -> new SessionDetails(
                         session.getId(),
                         session.getCreatedAt(),
                         session.getExpiresAt(),

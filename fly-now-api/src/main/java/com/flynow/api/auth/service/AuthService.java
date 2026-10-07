@@ -4,12 +4,10 @@ import com.flynow.api.auth.dto.request.ChangePasswordRequest;
 import com.flynow.api.auth.dto.request.LoginRequest;
 import com.flynow.api.auth.dto.request.RegisterRequest;
 import com.flynow.api.auth.dto.request.ResetPasswordRequest;
-import com.flynow.api.auth.dto.response.LoginResponse;
-import com.flynow.api.auth.dto.response.RegisterResponse;
-import com.flynow.api.auth.dto.response.SessionResponse;
 import com.flynow.api.auth.security.JwtProperties;
 import com.flynow.api.auth.security.PasswordSafetyService;
 import com.flynow.api.auth.service.model.AuthenticationResult;
+import com.flynow.api.auth.service.model.SessionDetails;
 import com.flynow.api.auth.session.ClientContext;
 import com.flynow.api.auth.session.IssuedSession;
 import com.flynow.api.entities.AuthTokenType;
@@ -54,7 +52,7 @@ public class AuthService {
     private final PasswordSafetyService passwordSafetyService;
 
     @Transactional
-    public RegisterResponse register(RegisterRequest request) {
+    public UserAccount register(RegisterRequest request) {
         String username = normalize(request.username());
         String email = normalize(request.email());
         if (userRepository.existsByUsername(username)) {
@@ -84,7 +82,7 @@ public class AuthService {
             throw new ConflictException("Username or email is already in use");
         }
 
-        return new RegisterResponse(user.getId(), user.getName(), user.getUsername(), user.getEmail());
+        return user;
     }
 
     @Transactional
@@ -149,7 +147,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public List<SessionResponse> sessions(Long userId) {
+    public List<SessionDetails> sessions(Long userId) {
         return sessionService.list(userId);
     }
 
@@ -166,7 +164,8 @@ public class AuthService {
 
     private AuthenticationResult authenticatedResult(IssuedSession session) {
         return new AuthenticationResult(
-                LoginResponse.authenticated(session.accessToken(), jwtProperties.expirationSeconds()),
+                session.accessToken(),
+                jwtProperties.expirationSeconds(),
                 session.refreshToken(),
                 session.refreshExpiresAt()
         );

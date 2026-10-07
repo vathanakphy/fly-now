@@ -12,9 +12,11 @@ import com.flynow.api.auth.dto.response.SessionResponse;
 import com.flynow.api.auth.security.AuthenticatedUserIdResolver;
 import com.flynow.api.auth.service.AuthService;
 import com.flynow.api.auth.service.model.AuthenticationResult;
+import com.flynow.api.auth.service.model.SessionDetails;
 import com.flynow.api.auth.session.ClientContext;
 import com.flynow.api.auth.web.AuthApiPaths;
 import com.flynow.api.auth.web.RefreshCookieFactory;
+import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.web.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -52,8 +54,10 @@ public class AuthController {
     @GetMapping(AuthApiPaths.CSRF)
     @Operation(summary = "Get a CSRF token")
     public ApiResponse<CsrfResponse> csrf(CsrfToken token) {
-        return ApiResponse.success("CSRF token retrieved",
-                new CsrfResponse(token.getHeaderName(), token.getParameterName(), token.getToken()));
+        CsrfResponse response = new CsrfResponse(
+                token.getHeaderName(), token.getParameterName(), token.getToken());
+
+        return ApiResponse.success("CSRF token retrieved", response);
     }
 
     @PostMapping(AuthApiPaths.REGISTER)
@@ -61,7 +65,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request
     ) {
-        RegisterResponse response = authService.register(request);
+        UserAccount user = authService.register(request);
+        RegisterResponse response = new RegisterResponse(
+                user.getId(), user.getName(), user.getUsername(), user.getEmail());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("User registered successfully", response));
     }
@@ -72,7 +78,10 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest servletRequest
     ) {
-        return tokenResponse(authService.login(request, context(servletRequest)), "Login successful");
+        ClientContext clientContext = context(servletRequest);
+        AuthenticationResult result = authService.login(request, clientContext);
+
+        return tokenResponse(result, "Login successful");
     }
 
     @PostMapping(AuthApiPaths.REFRESH)
@@ -81,7 +90,10 @@ public class AuthController {
             @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken,
             HttpServletRequest servletRequest
     ) {
-        return tokenResponse(authService.refresh(refreshToken, context(servletRequest)), "Token refreshed");
+        ClientContext clientContext = context(servletRequest);
+        AuthenticationResult result = authService.refresh(refreshToken, clientContext);
+
+        return tokenResponse(result, "Token refreshed");
     }
 
     @PostMapping(AuthApiPaths.LOGOUT)
@@ -100,7 +112,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logoutAll(
             Authentication authentication
     ) {
-        authService.logoutAll(userIdResolver.require(authentication));
+        Long userId = userIdResolver.require(authentication);
+        authService.logoutAll(userId);
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.clear().toString())
                 .body(ApiResponse.success("All sessions were revoked", null));
@@ -128,7 +142,9 @@ public class AuthController {
             Authentication authentication,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
-        authService.changePassword(userIdResolver.require(authentication), request);
+        Long userId = userIdResolver.require(authentication);
+        authService.changePassword(userId, request);
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.clear().toString())
                 .body(ApiResponse.success("Password changed; sign in again", null));
@@ -137,7 +153,13 @@ public class AuthController {
     @GetMapping(AuthApiPaths.SESSIONS)
     @Operation(summary = "List the authenticated user's sessions", security = @SecurityRequirement(name = "bearerAuth"))
     public ApiResponse<List<SessionResponse>> sessions(Authentication authentication) {
-        return ApiResponse.success("Sessions retrieved", authService.sessions(userIdResolver.require(authentication)));
+        Long userId = userIdResolver.require(authentication);
+        List<SessionDetails> sessions = authService.sessions(userId);
+        List<SessionResponse> responses = sessions.stream()
+                .map(this::toSessionResponse)
+                .toList();
+
+        return ApiResponse.success("Sessions retrieved", responses);
     }
 
     @DeleteMapping(AuthApiPaths.SESSION_BY_ID)
@@ -146,7 +168,9 @@ public class AuthController {
             Authentication authentication,
             @PathVariable UUID sessionId
     ) {
-        authService.revokeSession(userIdResolver.require(authentication), sessionId);
+        Long userId = userIdResolver.require(authentication);
+        authService.revokeSession(userId, sessionId);
+
         return ApiResponse.success("Session revoked", null);
     }
 
@@ -157,7 +181,21 @@ public class AuthController {
                     .create(result.refreshToken(), result.refreshExpiresAt())
                     .toString());
         }
-        return builder.body(ApiResponse.success(message, result.response()));
+        LoginResponse response = LoginResponse.authenticated(
+                result.accessToken(), result.expiresInSeconds());
+        return builder.body(ApiResponse.success(message, response));
+    }
+
+    private SessionResponse toSessionResponse(SessionDetails session) {
+        return new SessionResponse(
+                session.id(),
+                session.createdAt(),
+                session.expiresAt(),
+                session.lastUsedAt(),
+                session.active(),
+                session.ipAddress(),
+                session.userAgent()
+        );
     }
 
     private ClientContext context(HttpServletRequest request) {

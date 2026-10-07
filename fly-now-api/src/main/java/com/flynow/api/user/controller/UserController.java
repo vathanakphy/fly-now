@@ -1,9 +1,11 @@
 package com.flynow.api.user.controller;
 
 import com.flynow.api.auth.security.AuthenticatedUserIdResolver;
+import com.flynow.api.entities.UserAccount;
 import com.flynow.api.shared.web.ApiResponse;
 import com.flynow.api.user.dto.request.UpdateProfileRequest;
 import com.flynow.api.user.dto.response.UserResponse;
+import com.flynow.api.user.mapper.UserMapper;
 import com.flynow.api.user.service.UserService;
 import com.flynow.api.user.web.UserApiPaths;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,12 +28,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
     private final AuthenticatedUserIdResolver userIdResolver;
 
     @GetMapping(UserApiPaths.ME)
     @Operation(summary = "Get the authenticated user's profile")
     public ApiResponse<UserResponse> me(Authentication authentication) {
-        return ApiResponse.success("Current user retrieved", userService.me(userIdResolver.require(authentication)));
+        Long userId = userIdResolver.require(authentication);
+        UserAccount user = userService.me(userId);
+        UserResponse response = userMapper.toResponse(user);
+
+        return ApiResponse.success("Current user retrieved", response);
     }
 
     @PutMapping(UserApiPaths.ME)
@@ -40,8 +47,10 @@ public class UserController {
             Authentication authentication,
             @Valid @RequestBody UpdateProfileRequest request
     ) {
-        return ApiResponse.success("Profile updated successfully", userService.updateProfile(
-                userIdResolver.require(authentication),
-                request));
+        Long userId = userIdResolver.require(authentication);
+        UserAccount user = userService.updateProfile(userId, request);
+        UserResponse response = userMapper.toResponse(user);
+
+        return ApiResponse.success("Profile updated successfully", response);
     }
 }
